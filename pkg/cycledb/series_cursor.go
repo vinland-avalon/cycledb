@@ -2,6 +2,7 @@ package cycledb
 
 import (
 	"bytes"
+	"errors"
 	"sort"
 	"sync"
 

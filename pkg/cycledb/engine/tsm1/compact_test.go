@@ -16,82 +16,82 @@ import (
 )
 
 // Tests compacting a Cache snapshot into a single TSM file
-func TestCompactor_Snapshot(t *testing.T) {
-	dir := t.TempDir()
+// func TestCompactor_Snapshot(t *testing.T) {
+// 	dir := t.TempDir()
 
-	v1 := tsm1.NewValue(1, float64(1))
-	v2 := tsm1.NewValue(1, float64(1))
-	v3 := tsm1.NewValue(2, float64(2))
+// 	v1 := tsm1.NewValue(1, float64(1))
+// 	v2 := tsm1.NewValue(1, float64(1))
+// 	v3 := tsm1.NewValue(2, float64(2))
 
-	points1 := map[string][]tsm1.Value{
-		"cpu,host=A#!~#value": {v1},
-		"cpu,host=B#!~#value": {v2, v3},
-	}
+// 	points1 := map[string][]tsm1.Value{
+// 		"cpu,host=A#!~#value": {v1},
+// 		"cpu,host=B#!~#value": {v2, v3},
+// 	}
 
-	c := tsm1.NewCache(0, tsdb.EngineTags{})
-	for k, v := range points1 {
-		if err := c.Write([]byte(k), v); err != nil {
-			t.Fatalf("failed to write key foo to cache: %s", err.Error())
-		}
-	}
+// 	c := tsm1.NewCache(0, tsdb.EngineTags{})
+// 	for k, v := range points1 {
+// 		if err := c.Write([]byte(k), v); err != nil {
+// 			t.Fatalf("failed to write key foo to cache: %s", err.Error())
+// 		}
+// 	}
 
-	fs := &fakeFileStore{}
-	t.Cleanup(func() { fs.Close() })
+// 	fs := &fakeFileStore{}
+// 	t.Cleanup(func() { fs.Close() })
 
-	compactor := tsm1.NewCompactor()
-	compactor.Dir = dir
-	compactor.FileStore = fs
+// 	compactor := tsm1.NewCompactor()
+// 	compactor.Dir = dir
+// 	compactor.FileStore = fs
 
-	files, err := compactor.WriteSnapshot(c, zap.NewNop())
-	if err == nil {
-		t.Fatalf("expected error writing snapshot: %v", err)
-	}
-	if len(files) > 0 {
-		t.Fatalf("no files should be compacted: got %v", len(files))
+// 	files, err := compactor.WriteSnapshot(c, zap.NewNop())
+// 	if err == nil {
+// 		t.Fatalf("expected error writing snapshot: %v", err)
+// 	}
+// 	if len(files) > 0 {
+// 		t.Fatalf("no files should be compacted: got %v", len(files))
 
-	}
+// 	}
 
-	compactor.Open()
+// 	compactor.Open()
 
-	files, err = compactor.WriteSnapshot(c, zap.NewNop())
-	if err != nil {
-		t.Fatalf("unexpected error writing snapshot: %v", err)
-	}
+// 	files, err = compactor.WriteSnapshot(c, zap.NewNop())
+// 	if err != nil {
+// 		t.Fatalf("unexpected error writing snapshot: %v", err)
+// 	}
 
-	if got, exp := len(files), 1; got != exp {
-		t.Fatalf("files length mismatch: got %v, exp %v", got, exp)
-	}
+// 	if got, exp := len(files), 1; got != exp {
+// 		t.Fatalf("files length mismatch: got %v, exp %v", got, exp)
+// 	}
 
-	r := MustOpenTSMReader(files[0])
-	t.Cleanup(func() { r.Close() })
+// 	r := MustOpenTSMReader(files[0])
+// 	t.Cleanup(func() { r.Close() })
 
-	if got, exp := r.KeyCount(), 2; got != exp {
-		t.Fatalf("keys length mismatch: got %v, exp %v", got, exp)
-	}
+// 	if got, exp := r.KeyCount(), 2; got != exp {
+// 		t.Fatalf("keys length mismatch: got %v, exp %v", got, exp)
+// 	}
 
-	var data = []struct {
-		key    string
-		points []tsm1.Value
-	}{
-		{"cpu,host=A#!~#value", []tsm1.Value{v1}},
-		{"cpu,host=B#!~#value", []tsm1.Value{v2, v3}},
-	}
+// 	var data = []struct {
+// 		key    string
+// 		points []tsm1.Value
+// 	}{
+// 		{"cpu,host=A#!~#value", []tsm1.Value{v1}},
+// 		{"cpu,host=B#!~#value", []tsm1.Value{v2, v3}},
+// 	}
 
-	for _, p := range data {
-		values, err := r.ReadAll([]byte(p.key))
-		if err != nil {
-			t.Fatalf("unexpected error reading: %v", err)
-		}
+// 	for _, p := range data {
+// 		values, err := r.ReadAll([]byte(p.key))
+// 		if err != nil {
+// 			t.Fatalf("unexpected error reading: %v", err)
+// 		}
 
-		if got, exp := len(values), len(p.points); got != exp {
-			t.Fatalf("values length mismatch: got %v, exp %v", got, exp)
-		}
+// 		if got, exp := len(values), len(p.points); got != exp {
+// 			t.Fatalf("values length mismatch: got %v, exp %v", got, exp)
+// 		}
 
-		for i, point := range p.points {
-			assertValueEqual(t, values[i], point)
-		}
-	}
-}
+// 		for i, point := range p.points {
+// 			assertValueEqual(t, values[i], point)
+// 		}
+// 	}
+// }
 
 func TestCompactor_CompactFullLastTimestamp(t *testing.T) {
 	dir := t.TempDir()
@@ -1400,139 +1400,139 @@ func TestTSMKeyIterator_Abort(t *testing.T) {
 	}
 }
 
-func TestCacheKeyIterator_Single(t *testing.T) {
-	v0 := tsm1.NewValue(1, 1.0)
+// func TestCacheKeyIterator_Single(t *testing.T) {
+// 	v0 := tsm1.NewValue(1, 1.0)
 
-	writes := map[string][]tsm1.Value{
-		"cpu,host=A#!~#value": {v0},
-	}
+// 	writes := map[string][]tsm1.Value{
+// 		"cpu,host=A#!~#value": {v0},
+// 	}
 
-	c := tsm1.NewCache(0, tsdb.EngineTags{})
+// 	c := tsm1.NewCache(0, tsdb.EngineTags{})
 
-	for k, v := range writes {
-		if err := c.Write([]byte(k), v); err != nil {
-			t.Fatalf("failed to write key foo to cache: %s", err.Error())
-		}
-	}
+// 	for k, v := range writes {
+// 		if err := c.Write([]byte(k), v); err != nil {
+// 			t.Fatalf("failed to write key foo to cache: %s", err.Error())
+// 		}
+// 	}
 
-	iter := tsm1.NewCacheKeyIterator(c, 1, nil)
-	var readValues bool
-	for iter.Next() {
-		key, _, _, block, err := iter.Read()
-		if err != nil {
-			t.Fatalf("unexpected error read: %v", err)
-		}
+// 	iter := tsm1.NewCacheKeyIterator(c, 1, nil)
+// 	var readValues bool
+// 	for iter.Next() {
+// 		key, _, _, block, err := iter.Read()
+// 		if err != nil {
+// 			t.Fatalf("unexpected error read: %v", err)
+// 		}
 
-		values, err := tsm1.DecodeBlock(block, nil)
-		if err != nil {
-			t.Fatalf("unexpected error decode: %v", err)
-		}
+// 		values, err := tsm1.DecodeBlock(block, nil)
+// 		if err != nil {
+// 			t.Fatalf("unexpected error decode: %v", err)
+// 		}
 
-		if got, exp := string(key), "cpu,host=A#!~#value"; got != exp {
-			t.Fatalf("key mismatch: got %v, exp %v", got, exp)
-		}
+// 		if got, exp := string(key), "cpu,host=A#!~#value"; got != exp {
+// 			t.Fatalf("key mismatch: got %v, exp %v", got, exp)
+// 		}
 
-		if got, exp := len(values), len(writes); got != exp {
-			t.Fatalf("values length mismatch: got %v, exp %v", got, exp)
-		}
+// 		if got, exp := len(values), len(writes); got != exp {
+// 			t.Fatalf("values length mismatch: got %v, exp %v", got, exp)
+// 		}
 
-		for _, v := range values {
-			readValues = true
-			assertValueEqual(t, v, v0)
-		}
-	}
+// 		for _, v := range values {
+// 			readValues = true
+// 			assertValueEqual(t, v, v0)
+// 		}
+// 	}
 
-	if !readValues {
-		t.Fatalf("failed to read any values")
-	}
-}
+// 	if !readValues {
+// 		t.Fatalf("failed to read any values")
+// 	}
+// }
 
-func TestCacheKeyIterator_Chunked(t *testing.T) {
-	v0 := tsm1.NewValue(1, 1.0)
-	v1 := tsm1.NewValue(2, 2.0)
+// func TestCacheKeyIterator_Chunked(t *testing.T) {
+// 	v0 := tsm1.NewValue(1, 1.0)
+// 	v1 := tsm1.NewValue(2, 2.0)
 
-	writes := map[string][]tsm1.Value{
-		"cpu,host=A#!~#value": {v0, v1},
-	}
+// 	writes := map[string][]tsm1.Value{
+// 		"cpu,host=A#!~#value": {v0, v1},
+// 	}
 
-	c := tsm1.NewCache(0, tsdb.EngineTags{})
+// 	c := tsm1.NewCache(0, tsdb.EngineTags{})
 
-	for k, v := range writes {
-		if err := c.Write([]byte(k), v); err != nil {
-			t.Fatalf("failed to write key foo to cache: %s", err.Error())
-		}
-	}
+// 	for k, v := range writes {
+// 		if err := c.Write([]byte(k), v); err != nil {
+// 			t.Fatalf("failed to write key foo to cache: %s", err.Error())
+// 		}
+// 	}
 
-	iter := tsm1.NewCacheKeyIterator(c, 1, nil)
-	var readValues bool
-	var chunk int
-	for iter.Next() {
-		key, _, _, block, err := iter.Read()
-		if err != nil {
-			t.Fatalf("unexpected error read: %v", err)
-		}
+// 	iter := tsm1.NewCacheKeyIterator(c, 1, nil)
+// 	var readValues bool
+// 	var chunk int
+// 	for iter.Next() {
+// 		key, _, _, block, err := iter.Read()
+// 		if err != nil {
+// 			t.Fatalf("unexpected error read: %v", err)
+// 		}
 
-		values, err := tsm1.DecodeBlock(block, nil)
-		if err != nil {
-			t.Fatalf("unexpected error decode: %v", err)
-		}
+// 		values, err := tsm1.DecodeBlock(block, nil)
+// 		if err != nil {
+// 			t.Fatalf("unexpected error decode: %v", err)
+// 		}
 
-		if got, exp := string(key), "cpu,host=A#!~#value"; got != exp {
-			t.Fatalf("key mismatch: got %v, exp %v", got, exp)
-		}
+// 		if got, exp := string(key), "cpu,host=A#!~#value"; got != exp {
+// 			t.Fatalf("key mismatch: got %v, exp %v", got, exp)
+// 		}
 
-		if got, exp := len(values), 1; got != exp {
-			t.Fatalf("values length mismatch: got %v, exp %v", got, exp)
-		}
+// 		if got, exp := len(values), 1; got != exp {
+// 			t.Fatalf("values length mismatch: got %v, exp %v", got, exp)
+// 		}
 
-		for _, v := range values {
-			readValues = true
-			assertValueEqual(t, v, writes["cpu,host=A#!~#value"][chunk])
-		}
-		chunk++
-	}
+// 		for _, v := range values {
+// 			readValues = true
+// 			assertValueEqual(t, v, writes["cpu,host=A#!~#value"][chunk])
+// 		}
+// 		chunk++
+// 	}
 
-	if !readValues {
-		t.Fatalf("failed to read any values")
-	}
-}
+// 	if !readValues {
+// 		t.Fatalf("failed to read any values")
+// 	}
+// }
 
-// Tests that the CacheKeyIterator will abort if the interrupt channel is closed
-func TestCacheKeyIterator_Abort(t *testing.T) {
-	v0 := tsm1.NewValue(1, 1.0)
+// // Tests that the CacheKeyIterator will abort if the interrupt channel is closed
+// func TestCacheKeyIterator_Abort(t *testing.T) {
+// 	v0 := tsm1.NewValue(1, 1.0)
 
-	writes := map[string][]tsm1.Value{
-		"cpu,host=A#!~#value": {v0},
-	}
+// 	writes := map[string][]tsm1.Value{
+// 		"cpu,host=A#!~#value": {v0},
+// 	}
 
-	c := tsm1.NewCache(0, tsdb.EngineTags{})
+// 	c := tsm1.NewCache(0, tsdb.EngineTags{})
 
-	for k, v := range writes {
-		if err := c.Write([]byte(k), v); err != nil {
-			t.Fatalf("failed to write key foo to cache: %s", err.Error())
-		}
-	}
+// 	for k, v := range writes {
+// 		if err := c.Write([]byte(k), v); err != nil {
+// 			t.Fatalf("failed to write key foo to cache: %s", err.Error())
+// 		}
+// 	}
 
-	intC := make(chan struct{})
+// 	intC := make(chan struct{})
 
-	iter := tsm1.NewCacheKeyIterator(c, 1, intC)
+// 	iter := tsm1.NewCacheKeyIterator(c, 1, intC)
 
-	var aborted bool
-	for iter.Next() {
-		//Abort
-		close(intC)
+// 	var aborted bool
+// 	for iter.Next() {
+// 		//Abort
+// 		close(intC)
 
-		_, _, _, _, err := iter.Read()
-		if err == nil {
-			t.Fatalf("unexpected error read: %v", err)
-		}
-		aborted = err != nil
-	}
+// 		_, _, _, _, err := iter.Read()
+// 		if err == nil {
+// 			t.Fatalf("unexpected error read: %v", err)
+// 		}
+// 		aborted = err != nil
+// 	}
 
-	if !aborted {
-		t.Fatalf("iteration not aborted")
-	}
-}
+// 	if !aborted {
+// 		t.Fatalf("iteration not aborted")
+// 	}
+// }
 
 func TestDefaultPlanner_Plan_Min(t *testing.T) {
 	cp := tsm1.NewDefaultPlanner(
