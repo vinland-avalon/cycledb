@@ -27,7 +27,7 @@ import (
 	"github.com/influxdata/influxdb/v2/pkg/file"
 	"github.com/influxdata/influxdb/v2/pkg/limiter"
 	"github.com/influxdata/influxdb/v2/pkg/slices"
-	internal "github.com/vinland-avalon/cycledb/pkg/cycledb/internal"
+	internal "cycledb/pkg/cycledb/internal"
 	"github.com/influxdata/influxql"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
@@ -78,7 +78,6 @@ var (
 type ShardError struct {
 	id  uint64
 	Err error
-	try.try
 }
 
 // NewShardError returns a new ShardError.

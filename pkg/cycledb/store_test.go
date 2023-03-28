@@ -26,7 +26,7 @@ import (
 	"github.com/influxdata/influxdb/v2/models"
 	"github.com/influxdata/influxdb/v2/pkg/deep"
 	"github.com/influxdata/influxdb/v2/pkg/slices"
-	"github.com/influxdata/influxdb/v2/tsdb"
+	tsdb "cycledb/pkg/cycledb"
 	"github.com/influxdata/influxql"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
