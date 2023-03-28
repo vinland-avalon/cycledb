@@ -1,4 +1,4 @@
-package tsdb
+package cycledb
 
 import (
 	"io"

@@ -1,4 +1,4 @@
-package tsdb
+package cycledb
 
 //go:generate protoc --go_out=internal/ internal/fieldsindex.proto
 

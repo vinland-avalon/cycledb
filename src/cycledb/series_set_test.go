@@ -1,5 +1,4 @@
-package tsdb
-
+package cycledb
 import (
 	"bytes"
 	"fmt"

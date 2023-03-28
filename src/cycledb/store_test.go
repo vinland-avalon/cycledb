@@ -1,5 +1,6 @@
 //lint:file-ignore SA2002 this is older code, and `go test` will panic if its really a problem.
-package tsdb_test
+
+package cycledb_test
 
 import (
 	"bytes"

@@ -1,4 +1,4 @@
-package tsdb_test
+package cycledb_test
 
 import (
 	"testing"

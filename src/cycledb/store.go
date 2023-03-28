@@ -1,5 +1,5 @@
 //lint:file-ignore ST1005 this is old code. we're not going to conform error messages
-package tsdb // import "github.com/influxdata/influxdb/v2/tsdb"
+package cycledb // import "github.com/influxdata/influxdb/v2/tsdb"
 
 import (
 	"bytes"
