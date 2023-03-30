@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/influxdata/influxdb/v2/influxql/query"
-	"github.com/influxdata/influxdb/v2/internal"
+	"cycledb/pkg/internal"
 	"github.com/influxdata/influxdb/v2/models"
 	"github.com/influxdata/influxdb/v2/pkg/slices"
 	"cycledb/pkg/tsdb"
