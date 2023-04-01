@@ -22,7 +22,7 @@ import (
 var (
 	// ErrUnknownEngineFormat is returned when the engine format is
 	// unknown. ErrUnknownEngineFormat is currently returned if a format
-	// other than tsm1 is encountered.
+	// other than tsm is encountered.
 	ErrUnknownEngineFormat = errors.New("unknown engine format")
 )
 
@@ -125,14 +125,14 @@ func NewEngine(id uint64, i Index, path string, walPath string, sfile *SeriesFil
 		return engine, nil
 	}
 
-	// If it's a dir then it's a tsm1 engine
+	// If it's a dir then it's a tsm engine
 	format := DefaultEngine
 	if fi, err := os.Stat(path); err != nil {
 		return nil, err
 	} else if !fi.Mode().IsDir() {
 		return nil, ErrUnknownEngineFormat
 	} else {
-		format = "tsm1"
+		format = "tsm"
 	}
 
 	// Lookup engine by format.

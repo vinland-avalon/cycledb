@@ -10,7 +10,7 @@ import (
 
 const (
 	// DefaultEngine is the default engine for new shards
-	DefaultEngine = "tsm1"
+	DefaultEngine = "tsm"
 
 	// DefaultIndex is the default index for new shards
 	DefaultIndex = TSI1IndexName
@@ -104,7 +104,7 @@ type Config struct {
 	// Query logging
 	QueryLogEnabled bool `toml:"query-log-enabled"`
 
-	// Compaction options for tsm1 (descriptions above with defaults)
+	// Compaction options for tsm (descriptions above with defaults)
 	CacheMaxMemorySize             toml.Size     `toml:"cache-max-memory-size"`
 	CacheSnapshotMemorySize        toml.Size     `toml:"cache-snapshot-memory-size"`
 	CacheSnapshotWriteColdDuration toml.Duration `toml:"cache-snapshot-write-cold-duration"`

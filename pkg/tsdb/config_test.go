@@ -56,7 +56,7 @@ func TestConfig_Validate_Error(t *testing.T) {
 		t.Errorf("unexpected error: %s", err)
 	}
 
-	c.Engine = "tsm1"
+	c.Engine = "tsm"
 	c.Index = "foo"
 	if err := c.Validate(); err == nil || err.Error() != "unrecognized index foo" {
 		t.Errorf("unexpected error: %s", err)

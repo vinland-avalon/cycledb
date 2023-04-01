@@ -5,6 +5,6 @@ package engine // import "cycledb/pkg/tsdb/engine"
 
 import (
 
-	// Initialize and register tsm1 engine
-	_ "cycledb/pkg/tsdb/engine/tsm1"
+	// Initialize and register tsm engine
+	_ "cycledb/pkg/tsdb/engine/tsm"
 )

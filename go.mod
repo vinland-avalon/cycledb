@@ -119,7 +119,7 @@ require (
 	github.com/influxdata/influxdb-iox-client-go v1.0.0-beta.1 // indirect
 	github.com/influxdata/line-protocol v0.0.0-20200327222509-2487e7298839 // indirect
 	github.com/influxdata/line-protocol/v2 v2.2.1 // indirect
-	github.com/influxdata/pkg-config v0.2.11 // indirect
+	github.com/influxdata/pkg-config v0.2.12 // indirect
 	github.com/influxdata/tdigest v0.0.2-0.20210216194612-fc98d27c9e8b // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jmoiron/sqlx v1.3.4 // indirect

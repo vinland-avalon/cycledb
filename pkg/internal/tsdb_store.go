@@ -7,7 +7,7 @@ import (
 
 	"github.com/influxdata/influxdb/v2/influxql/query"
 	"github.com/influxdata/influxdb/v2/models"
-	"github.com/influxdata/influxdb/v2/tsdb"
+	"cycledb/pkg/tsdb"
 	"github.com/influxdata/influxql"
 	"go.uber.org/zap"
 )

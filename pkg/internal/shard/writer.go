@@ -6,8 +6,9 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"cycledb/pkg/tsdb/engine/tsm"
+
 	"github.com/influxdata/influxdb/v2/pkg/data/gen"
-	"github.com/influxdata/influxdb/v2/tsdb/engine/tsm1"
 	"go.uber.org/multierr"
 )
 
@@ -16,7 +17,7 @@ const (
 )
 
 type Writer struct {
-	tw       tsm1.TSMWriter
+	tw       tsm.TSMWriter
 	id       uint64
 	path     string
 	ext      string
@@ -46,7 +47,7 @@ func Sequence(seq int) option {
 // Temporary configures the writer to create tsm.tmp files.
 func Temporary() option {
 	return func(w *Writer) {
-		w.ext = tsm1.TSMFileExtension + "." + tsm1.TmpTSMFileExtension
+		w.ext = tsm.TSMFileExtension + "." + tsm.TmpTSMFileExtension
 	}
 }
 
@@ -58,7 +59,7 @@ func AutoNumber() option {
 }
 
 func NewWriter(id uint64, path string, opts ...option) *Writer {
-	w := &Writer{id: id, path: path, gen: 1, seq: 1, ext: tsm1.TSMFileExtension}
+	w := &Writer{id: id, path: path, gen: 1, seq: 1, ext: tsm.TSMFileExtension}
 
 	for _, opt := range opts {
 		opt(w)
@@ -69,7 +70,7 @@ func NewWriter(id uint64, path string, opts ...option) *Writer {
 	return w
 }
 
-func (w *Writer) Write(key []byte, values tsm1.Values) {
+func (w *Writer) Write(key []byte, values tsm.Values) {
 	if w.err != nil {
 		return
 	}
@@ -80,7 +81,7 @@ func (w *Writer) Write(key []byte, values tsm1.Values) {
 	}
 
 	if err := w.tw.Write(key, values); err != nil {
-		if err == tsm1.ErrMaxBlocksExceeded {
+		if err == tsm.ErrMaxBlocksExceeded {
 			w.closeTSM()
 			w.nextTSM()
 		} else {
@@ -107,7 +108,7 @@ func (w *Writer) WriteV(key []byte, values gen.Values) {
 	}
 
 	if err := w.tw.WriteBlock(key, minT, maxT, w.buf); err != nil {
-		if err == tsm1.ErrMaxBlocksExceeded {
+		if err == tsm.ErrMaxBlocksExceeded {
 			w.closeTSM()
 			w.nextTSM()
 		} else {
@@ -143,7 +144,7 @@ func (w *Writer) nextTSM() {
 	}
 
 	// Create the writer for the new TSM file.
-	w.tw, err = tsm1.NewTSMWriter(fd)
+	w.tw, err = tsm.NewTSMWriter(fd)
 	if err != nil {
 		w.err = err
 		return
@@ -152,7 +153,7 @@ func (w *Writer) nextTSM() {
 
 func (w *Writer) closeTSM() {
 	var err error
-	if e := w.tw.WriteIndex(); e != nil && e != tsm1.ErrNoValues {
+	if e := w.tw.WriteIndex(); e != nil && e != tsm.ErrNoValues {
 		err = multierr.Append(err, e)
 	}
 

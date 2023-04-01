@@ -1,6 +1,6 @@
 package internal
 
-import "github.com/influxdata/influxdb/v2/tsdb"
+import "cycledb/pkg/tsdb"
 
 var (
 	_ tsdb.IntegerArrayCursor  = NewIntegerArrayCursorMock()
