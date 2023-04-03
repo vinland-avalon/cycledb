@@ -1,3 +1,12 @@
+# How to run main.go:
+remember go version >= 1.20
+so use `gvm` 
+```sh
+source /home/bohan_wu_ubuntu/.gvm/scripts/gvm
+gvm use go1.20 --default
+```
+to build and run the program, follow [guide](https://github.com/influxdata/influxdb/blob/master/CONTRIBUTING.md#building-from-source)
+
 # Line Protocol
 
 The line protocol is a text based format for writing points to InfluxDB.  Each line defines a single point. 
