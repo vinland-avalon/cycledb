@@ -2,10 +2,27 @@
 remember go version >= 1.20
 so use `gvm` 
 ```sh
-source /home/bohan_wu_ubuntu/.gvm/scripts/gvm
-gvm use go1.20 --default
+source /home/bohan_wu_ubuntu/.gvm/scripts/gvm (wsl2)
+source /home/local/ASUAD/bohanwu/.gvm/scripts/gvm (ASUAD)
+# optional: 
+# gvm install go1.18
+gvm use go1.18 --default
+```
+other configs
+```sh
+sudo apt install make clang pkg-config protobuf-compiler libprotobuf-dev build-essential
+```
+Then flux
+```sh
+go get github.com/influxdata/pkg-config
 ```
 to build and run the program, follow [guide](https://github.com/influxdata/influxdb/blob/master/CONTRIBUTING.md#building-from-source)
+
+attention:
+if ``cannot find flux.pc``, I also have no idea about how it happens.
+The followwing factors may works:
+- I run benchmarks in influxdb
+- I run the pkg-config.sh in influxdb/scripts/, however, it errors.
 
 # Line Protocol
 
