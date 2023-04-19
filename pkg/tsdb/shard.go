@@ -390,7 +390,7 @@ func (s *Shard) openNoLock(ctx context.Context) (bool, error) {
 
 		seriesIDSet := NewSeriesIDSet()
 
-		// Initialize underlying index.
+		// Initialize underlying index. tsi so far
 		ipath := filepath.Join(s.path, "index")
 		idx, err := NewIndex(s.id, s.database, ipath, seriesIDSet, s.sfile, s.options)
 		if err != nil {
