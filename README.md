@@ -19,11 +19,11 @@ go get github.com/influxdata/pkg-config
 to build and run the program, follow [guide](https://github.com/influxdata/influxdb/blob/master/CONTRIBUTING.md#building-from-source)
 
 # [Basic Concepts](https://docs.influxdata.com/influxdb/v1.8/concepts/storage_engine/#the-influxdb-storage-engine-and-the-time-structured-merge-tree-tsm)
-## shard
+## Shard
 Influxdb will create a shard for each block of time
 
-in-memory index <--1:n-->shard <---1:1---> storage engine database <----1:1----> wal <--1:n--> tsm files
-## storage engin
+in-memory index <-1:n-> shard <-1:1-> storage engine database <-1:1-> wal <-1:n-> tsm files
+## Storage Engine
 Provides storage and query interface, has the following components
 - In-Memory Index - It is shared across shards, providing quick access to measurement, tags and series
 - WAL
@@ -33,6 +33,56 @@ Provides storage and query interface, has the following components
 - Compactor - The Compactor is responsible for converting less optimized Cache and TSM data into more read-optimized formats. It does this by compressing series, removing deleted data, optimizing indices and combining smaller files into larger ones.
 - Compactor Planner - Determines which TSM to compact and Handle concurrent compactions.
 - Writers/Readers - Each file type (WAL segment, TSM files, tombstones, etc..) has Writers and Readers for working with the formats.
+
+## WAL
+_000001.wal, increased monatically, once reach 10MB, create another one.
+Batching?
+Each entry in the WAL follows a TLV standard with a single byte representing the type of entry (write or delete), a 4 byte uint32 for the length of the compressed block, and then the compressed block.
+
+## Cache
+Copy of WAL but in memory. No compression. key -> measurement+tag set+unique field.
+Queries execute on copy of the data that is made from cache at Query processing time, so that it won't conflict with writes?
+There are some limits:
+- cache-snapshot-memory-size - When reach this limit, trigger a snapshot to TSM file and delete the corresponding WAL segment.
+- cache-max-memory-size - When reach, block writes.
+
+## TSM files
++--------+------------------------------------+-------------+--------------+
+| Header |               Blocks               |    Index    |    Footer    |
+|5 bytes |              N bytes               |   N bytes   |   4 bytes    |
++--------+------------------------------------+-------------+--------------+
+One data block only contains data in just one time-series.  
+Index in fact is `Indexes` containing index entry 1:1 to data block. An index entry is shown as below:
++-----------------------------------------------------------------------------+
+│                                   Index                                     │
++-----------------------------------------------------------------------------+
+│ Key Len │   Key   │ Type │ Count │Min Time │Max Time │ Offset │  Size  │...│
+│ 2 bytes │ N bytes │1 byte│2 bytes│ 8 bytes │ 8 bytes │8 bytes │4 bytes │   │
++-----------------------------------------------------------------------------+
+Footer contains offset of Index.  
+The data block is compressed as follows:
++--------------------------------------------------+
+| Type  |  Len  |   Timestamps    |      Values    |
+|1 Byte | VByte |     N Bytes     |    N Bytes     │
++--------------------------------------------------+
+The Type is about how to compress.
+
+## Compactions
+There are several stages.
+### Snapshots
+Cache(memory) and WAL(disk storage) to TSM files, according to memory and time threshold.
+### Level Compactions
+Snapshots -> Level 1 files -> Level 2 files -> Level 3 files -> Level 4 files(end). Compactions in different level is of different strategy.
+### Index Optimization
+After the Level 4 files accumulate, the internal index are larger and harder to access. Such compactions are to make sure one file only contains points from minimum time-series.
+### Full Compaction
+
+## Operates
+### Writes
+### Updates
+### Deletes
+The engine now only support series level deletes?  
+Delete will first write delete entry to WAL, then update the filestorage and cache. The cache evicts all relevant entries. The filestorage writes a tombstone for each TSM files containing the relevant entries.The tombstone file are used at startup time to ignore some data as well as during compaction time to remove entries.
 
 # Line Protocol
 
