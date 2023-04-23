@@ -1,23 +1,27 @@
 package main
 
 import (
+	"compress/gzip"
 	"context"
 	"cycledb/pkg/tsdb"
 	_ "cycledb/pkg/tsdb/engine"
 	_ "cycledb/pkg/tsdb/index"
-	"fmt"
+	"io"
 	"log"
+	"os"
+	"time"
 
 	"github.com/influxdata/influxdb/v2/models"
 )
 
 var (
-	shardPath      string = "~/shard"
-	shardWalPath   string = "~/shard/wal"
-	seriesFilePath string = "~/shard/series"
+	shardPath      string = "./db/shard"
+	shardWalPath   string = "./db/wal"
+	seriesFilePath string = "./db/series_file"
 )
 
 func main() {
+	// 0. init shard
 	ctx := context.Background()
 
 	opt := tsdb.NewEngineOptions()
@@ -32,7 +36,7 @@ func main() {
 	}
 	// fmt.Printf("%+v\n", shard)
 
-	// create a point
+	// 1. create a point
 	// mesurement, two fields, timestamp
 	p, err := models.ParsePoints([]byte(`m v=47i,f=42 36`))
 	if err != nil {
@@ -48,10 +52,47 @@ func main() {
 	fieldSet := shard.MeasurementFields([]byte("m")).FieldSet()
 	log.Printf("measurement %s 's fields:  %+v", "m", fieldSet)
 
+	// 2. create batch of points
+	points, err := batchOfTestData("./pkg/tsdb/index/tsi1/testdata/line-protocol-1M.txt.gz")
+	if err != nil {
+		log.Fatalf("fail to reach zipped test data, err: %+v", err)
+	}
+	err = shard.WritePoints(ctx, points)
+	if err != nil {
+		log.Fatalf("fail to write batch of data, err: %+v", err)
+	}
+
 	itr, err := shard.CreateCursorIterator(ctx)
 	if err != nil {
 		log.Fatalf("fail to create iterator of shard, err: %+v\n", err)
 	}
 
-	fmt.Printf("itr.status: %+v\n", itr.Stats())
+	log.Printf("itr.status: %+v\n", itr.Stats())
+
+	time.Sleep(5 * time.Second)
+	shard.Close()
+}
+
+func batchOfTestData(zipPath string) ([]models.Point, error) {
+	fd, err := os.Open(zipPath)
+	if err != nil {
+		return nil, err
+	}
+
+	gzr, err := gzip.NewReader(fd)
+	if err != nil {
+		fd.Close()
+		return nil, err
+	}
+
+	data, err := io.ReadAll(gzr)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := fd.Close(); err != nil {
+		return nil, err
+	}
+
+	return models.ParsePoints(data)
 }
