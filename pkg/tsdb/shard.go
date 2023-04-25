@@ -401,6 +401,7 @@ func (s *Shard) openNoLock(ctx context.Context) (bool, error) {
 		// Check if the index needs to be rebuilt before Open() initializes
 		// its file system layout.
 		var shouldReindex bool
+		// if the index files do not exist at all, of course they need to be rebuilt
 		if _, err := os.Stat(ipath); os.IsNotExist(err) {
 			shouldReindex = true
 		}

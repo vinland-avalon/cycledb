@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"cycledb/pkg/tsdb"
 	_ "cycledb/pkg/tsdb/engine"
 	_ "cycledb/pkg/tsdb/index"
+	"cycledb/pkg/tsdb/index/tsi1"
 	"io"
 	"log"
 	"os"
@@ -95,4 +97,12 @@ func batchOfTestData(zipPath string) ([]models.Point, error) {
 	}
 
 	return models.ParsePoints(data)
+}
+
+func exportIndex(idx *tsi1.Index) (bytes.Buffer, error) {
+	var buf bytes.Buffer
+	e := tsi1.NewSQLIndexExporter(&buf)
+	e.ShowSchema = false
+	err := e.ExportIndex(idx)
+	return buf, err
 }
