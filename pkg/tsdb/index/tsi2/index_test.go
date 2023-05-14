@@ -1,11 +1,12 @@
 package tsi2_test
 
 import (
+	"fmt"
 	"testing"
 
 	"cycledb/pkg/tsdb/index/tsi2"
 
-	"github.com/influxdata/influxdb/v2/pkg/testing/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func GetTagPairsExample(suffix string) []tsi2.TagPair {
@@ -31,7 +32,7 @@ func GetTagPairsExample(suffix string) []tsi2.TagPair {
 }
 
 func TestInitAndGetSeriesID(t *testing.T) {
-	gi := tsi2.NewGridIndex()
+	gi := tsi2.NewGridIndex(tsi2.NewAnalyzer(10))
 	// first series
 	ok, id := gi.InitNewSeriesID(GetTagPairsExample("0"))
 	assert.Equal(t, ok, true)
@@ -86,4 +87,38 @@ func Contains(a, b []int64) bool {
 		}
 	}
 	return true
+}
+
+func GetManyTagPairs(tagKeyNum, tagValueNum int) ([][]tsi2.TagPair) {
+	manyTagPairs := [][]tsi2.TagPair{}
+	for i := 0; i < tagValueNum; i++ {
+		tagPairs := []tsi2.TagPair{}
+		for j := 0; j < tagKeyNum; j++ {
+			tagPairs = append(tagPairs, tsi2.TagPair{
+				TagKey: fmt.Sprintf("%c", 'a'+j),
+				TagValue: fmt.Sprintf("%d", i),
+			})
+		}
+		manyTagPairs = append(manyTagPairs, tagPairs)
+	}
+	return manyTagPairs
+}
+
+func TestMultiGrid(t *testing.T) {
+	gi := tsi2.NewGridIndex(tsi2.NewAnalyzer(2))
+	manyTagPairs := GetManyTagPairs(2, 5)
+	manyTagPairs2 := GetManyTagPairs(3, 2)
+	manyTagPairs = append(manyTagPairs, manyTagPairs2...)
+	wanted := []int64{0, 3, 4, 7, 8, 12, 19}
+	for i, tagPairs := range manyTagPairs {
+		if len(tagPairs) == 3 {
+			ok, id := gi.InitNewSeriesID(tagPairs)
+			assert.Equal(t, true, ok)
+			assert.Equal(t, wanted[i], id)
+			continue
+		}
+		ok, id := gi.InitNewSeriesID(tagPairs)
+		assert.Equal(t, true, ok)
+		assert.Equal(t, wanted[i], id)
+	}
 }

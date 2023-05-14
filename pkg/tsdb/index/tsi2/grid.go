@@ -128,6 +128,9 @@ func (g *Grid) GetStrictlyMatchedIDForTagPairs(tagPairs []TagPair) int64 {
 	for _, tagPair := range tagPairs {
 		tagPairsMap[tagPair.TagKey] = tagPair.TagValue
 	}
+	if len(tagPairsMap) != g.capacity {
+		return int64(-1)
+	}
 	for i := g.capacity - 1; i >= 0; i-- {
 		tagValue, ok := tagPairsMap[g.tagKeys[i]]
 		if !ok {

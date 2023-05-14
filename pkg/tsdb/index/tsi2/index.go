@@ -10,11 +10,15 @@ type GridIndex struct {
 	analyzer *Analyzer
 }
 
-func NewGridIndex() *GridIndex {
+func NewGridIndex(analyzer *Analyzer) *GridIndex {
 	return &GridIndex{
 		grids:    []*Grid{},
-		analyzer: &Analyzer{},
+		analyzer: analyzer,
 	}
+}
+
+func (gi *GridIndex) WithAnalyzer(analyzer *Analyzer) {
+	gi.analyzer = analyzer
 }
 
 // GetSeriesIDsWithTagPairs: TODO(vinland-avalon): will return some fake ids
