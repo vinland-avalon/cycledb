@@ -4,7 +4,7 @@ https://cloud.tencent.com/developer/article/1397217
 ## File Organization
 ![organization](https://ask.qcloudimg.com/http-save/yehe-3003208/z0a5xwdxof.png?imageView2/2/w/2560/h/7000 "organization")
 ### SeriesFile
-It could also be named as `SeriesKeyFile`, for it stores keys(measurement + tag set) for all series, and shared by all shards, across the entire database.
+It could also be named as `SeriesKeyFile`, for it stores keys(measurement + tag set) for all series, and is shared by all shards, across the entire database.
 ### SeriesIndex
 - Two maps there: sereisKey -> id, id -> offset
 - seriesKey: measurement + tags;

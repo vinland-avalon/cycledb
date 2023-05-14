@@ -17,12 +17,17 @@ import (
 )
 
 var (
-	shardPath      string = "./db/shard"
-	shardWalPath   string = "./db/wal"
-	seriesFilePath string = "./db/series_file"
+	shardPath      string = "shard"
+	shardWalPath   string = "wal"
+	seriesFilePath string = "series_file"
 )
 
 func main() {
+	basePath := "../instance/"+time.Now().Format(time.RFC850)+"/"
+	shardPath = basePath + shardPath
+	shardWalPath = basePath + shardWalPath
+	seriesFilePath = basePath + seriesFilePath
+
 	// 0. init shard
 	ctx := context.Background()
 
