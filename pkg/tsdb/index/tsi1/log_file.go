@@ -518,6 +518,7 @@ func (f *LogFile) DeleteTagValue(name, key, value []byte) error {
 
 // AddSeriesList adds a list of series to the log file in bulk.
 func (f *LogFile) AddSeriesList(seriesSet *tsdb.SeriesIDSet, names [][]byte, tagsSlice []models.Tags) ([]uint64, error) {
+	// README.md (tsi), Writes - step 1
 	seriesIDs, err := f.sfile.CreateSeriesListIfNotExists(names, tagsSlice)
 	if err != nil {
 		return nil, err
@@ -533,6 +534,7 @@ func (f *LogFile) AddSeriesList(seriesSet *tsdb.SeriesIDSet, names [][]byte, tag
 			continue
 		}
 		writeRequired = true
+		// Once a non-exist series appears, add it to index log
 		entries = append(entries, LogEntry{SeriesID: seriesIDs[i], name: names[i], tags: tagsSlice[i], cached: true, batchidx: i})
 	}
 	seriesSet.RUnlock()
@@ -674,6 +676,7 @@ func (f *LogFile) execSeriesEntry(e *LogEntry) {
 		if len(f.keyBuf) < sz {
 			f.keyBuf = make([]byte, 0, sz)
 		}
+		// [:0] could clear a slice
 		seriesKey = tsdb.AppendSeriesKey(f.keyBuf[:0], e.name, e.tags)
 	} else {
 		seriesKey = f.sfile.SeriesKey(e.SeriesID)

@@ -1,6 +1,6 @@
 # How to run main.go:
 remember go version >= 1.20
-so use `gvm` 
+so use `gvm`
 ```sh
 source /home/bohan_wu_ubuntu/.gvm/scripts/gvm (wsl2)
 source /home/local/ASUAD/bohanwu/.gvm/scripts/gvm (ASUAD)
@@ -18,15 +18,75 @@ go get github.com/influxdata/pkg-config
 ```
 to build and run the program, follow [guide](https://github.com/influxdata/influxdb/blob/master/CONTRIBUTING.md#building-from-source)
 
-attention:
-if ``cannot find flux.pc``, I also have no idea about how it happens.
-The followwing factors may works:
-- I run benchmarks in influxdb
-- I run the pkg-config.sh in influxdb/scripts/, however, it errors.
+# [Basic Concepts](https://docs.influxdata.com/influxdb/v1.8/concepts/storage_engine/#the-influxdb-storage-engine-and-the-time-structured-merge-tree-tsm)
+## Shard
+Influxdb will create a shard for each block of time
+
+in-memory index <-1:n-> shard <-1:1-> storage engine database <-1:1-> wal <-1:n-> tsm files
+## Storage Engine
+Provides storage and query interface, has the following components
+- In-Memory Index - It is shared across shards, providing quick access to measurement, tags and series
+- WAL
+- Cache - In-memory representation of WAL, be queried at runtime and merged with data stored in TSM.(memtable?)
+- TSM Files - SST, columnar format, compressed
+- FileStore - Deal with replaced and removed TSM files?
+- Compactor - The Compactor is responsible for converting less optimized Cache and TSM data into more read-optimized formats. It does this by compressing series, removing deleted data, optimizing indices and combining smaller files into larger ones.
+- Compactor Planner - Determines which TSM to compact and Handle concurrent compactions.
+- Writers/Readers - Each file type (WAL segment, TSM files, tombstones, etc..) has Writers and Readers for working with the formats.
+
+## WAL
+_000001.wal, increased monatically, once reach 10MB, create another one.
+Batching?
+Each entry in the WAL follows a TLV standard with a single byte representing the type of entry (write or delete), a 4 byte uint32 for the length of the compressed block, and then the compressed block.
+
+## Cache
+Copy of WAL but in memory. No compression. key -> measurement+tag set+unique field.
+Queries execute on copy of the data that is made from cache at Query processing time, so that it won't conflict with writes?
+There are some limits:
+- cache-snapshot-memory-size - When reach this limit, trigger a snapshot to TSM file and delete the corresponding WAL segment.
+- cache-max-memory-size - When reach, block writes.
+
+## TSM files
++--------+------------------------------------+-------------+--------------+
+| Header |               Blocks               |    Index    |    Footer    |
+|5 bytes |              N bytes               |   N bytes   |   4 bytes    |
++--------+------------------------------------+-------------+--------------+
+One data block only contains data in just one time-series.  
+Index in fact is `Indexes` containing index entry 1:1 to data block. An index entry is shown as below:
++-----------------------------------------------------------------------------+
+│                                   Index                                     │
++-----------------------------------------------------------------------------+
+│ Key Len │   Key   │ Type │ Count │Min Time │Max Time │ Offset │  Size  │...│
+│ 2 bytes │ N bytes │1 byte│2 bytes│ 8 bytes │ 8 bytes │8 bytes │4 bytes │   │
++-----------------------------------------------------------------------------+
+Footer contains offset of Index.  
+The data block is compressed as follows:
++--------------------------------------------------+
+| Type  |  Len  |   Timestamps    |      Values    |
+|1 Byte | VByte |     N Bytes     |    N Bytes     │
++--------------------------------------------------+
+The Type is about how to compress.
+
+## Compactions
+There are several stages.
+### Snapshots
+Cache(memory) and WAL(disk storage) to TSM files, according to memory and time threshold.
+### Level Compactions
+Snapshots -> Level 1 files -> Level 2 files -> Level 3 files -> Level 4 files(end). Compactions in different level is of different strategy.
+### Index Optimization
+After the Level 4 files accumulate, the internal index are larger and harder to access. Such compactions are to make sure one file only contains points from minimum time-series.
+### Full Compaction
+
+## Operates
+### Writes
+### Updates
+### Deletes
+The engine now only support series level deletes?  
+Delete will first write delete entry to WAL, then update the filestorage and cache. The cache evicts all relevant entries. The filestorage writes a tombstone for each TSM files containing the relevant entries.The tombstone file are used at startup time to ignore some data as well as during compaction time to remove entries.
 
 # Line Protocol
 
-The line protocol is a text based format for writing points to InfluxDB.  Each line defines a single point. 
+The line protocol is a text based format for writing points to InfluxDB.  Each line defines a single point.
 Multiple lines must be separated by the newline character `\n`. The format of the line consists of three parts:
 
 ```
@@ -37,7 +97,7 @@ Each section is separated by spaces.  The minimum required point consists of a m
 
 ## Key
 
-The key is the measurement name and any optional tags separated by commas.  Measurement names, tag keys, and tag values must escape any spaces or commas using a backslash (`\`). For example: `\ ` and `\,`.  All tag values are stored as strings and should not be surrounded in quotes. 
+The key is the measurement name and any optional tags separated by commas.  Measurement names, tag keys, and tag values must escape any spaces or commas using a backslash (`\`). For example: `\ ` and `\,`.  All tag values are stored as strings and should not be surrounded in quotes.
 
 Tags should be sorted by key before being sent for best performance. The sort should match that from the Go `bytes.Compare` function (http://golang.org/pkg/bytes/#Compare).
 
@@ -111,7 +171,6 @@ In this example the first line shows a `measurement` of "cpu", there are two tag
 cpu,host=server\ 01,region=uswest value=1,msg="all systems nominal"
 cpu,host=server\ 01,region=us\,west value_int=1i
 ```
-In these examples, the "host" is set to `server 01`. The field value associated with field key `msg` is double-quoted, as it is a string. The second example shows a region of `us,west` with the comma properly escaped. In the first example `value` is written as a floating point number. In the second, `value_int` is an integer. 
+In these examples, the "host" is set to `server 01`. The field value associated with field key `msg` is double-quoted, as it is a string. The second example shows a region of `us,west` with the comma properly escaped. In the first example `value` is written as a floating point number. In the second, `value_int` is an integer.
 
 # Distributed Queries
-

@@ -390,7 +390,7 @@ func (s *Shard) openNoLock(ctx context.Context) (bool, error) {
 
 		seriesIDSet := NewSeriesIDSet()
 
-		// Initialize underlying index.
+		// Initialize underlying index. tsi so far
 		ipath := filepath.Join(s.path, "index")
 		idx, err := NewIndex(s.id, s.database, ipath, seriesIDSet, s.sfile, s.options)
 		if err != nil {
@@ -401,6 +401,7 @@ func (s *Shard) openNoLock(ctx context.Context) (bool, error) {
 		// Check if the index needs to be rebuilt before Open() initializes
 		// its file system layout.
 		var shouldReindex bool
+		// if the index files do not exist at all, of course they need to be rebuilt
 		if _, err := os.Stat(ipath); os.IsNotExist(err) {
 			shouldReindex = true
 		}
