@@ -67,7 +67,7 @@ func newGrid(offset int64, tagPairs []TagPair, tagValuess []*TagValues) *Grid {
 }
 
 func (g *Grid) CalLength() int {
-	length := 1;
+	length := 1
 	for _, tagValues := range g.tagValuess {
 		length *= tagValues.capacity
 	}
@@ -102,21 +102,21 @@ func (g *Grid) GetIDsForSingleTagPair(tagKey, tagValue string) []int64 {
 		duration *= int64(g.tagValuess[i].capacity)
 	}
 
-	beginning := duration * int64(tagValueIndex) + g.offset
+	beginning := duration*int64(tagValueIndex) + g.offset
 	cycle := duration * int64(g.tagValuess[tagKeyIndex].capacity)
-	cycleCnt := int64(1);
+	cycleCnt := int64(1)
 	for i := 0; i < tagKeyIndex; i++ {
 		cycleCnt *= int64(g.tagValuess[i].capacity)
 	}
 
 	for cycleCnt != 0 {
 		for i := int64(0); i < duration; i++ {
-			ids = append(ids, beginning + int64(i))
+			ids = append(ids, beginning+int64(i))
 		}
 		beginning += cycle
 		cycleCnt--
 	}
-	
+
 	return ids
 }
 
@@ -173,7 +173,7 @@ func (g *Grid) InsertTagPairs(tagPairs []TagPair) (bool, int64) {
 		}
 
 		// no free slot
-		if tagValues.capacity == len(tagValues.values) {
+		if g.IfTagKeyExistAndFilledUp(tagPair.TagKey) {
 			return false, -1
 		}
 	}
@@ -190,4 +190,19 @@ func (g *Grid) InsertTagPairs(tagPairs []TagPair) (bool, int64) {
 
 	// calculate id
 	return true, g.GetStrictlyMatchedIDForTagPairs(tagPairs)
+}
+
+func (g *Grid) IfTagKeyExistAndFilledUp(tagKey string) bool {
+	index, ok := g.tagKeyToIndex[tagKey]
+	// the tag key does not exist
+	if !ok {
+		return false
+	}
+
+	// filled up already
+	tagValues := g.tagValuess[index]
+	if tagValues.capacity == len(tagValues.values) {
+		return true
+	}
+	return false
 }

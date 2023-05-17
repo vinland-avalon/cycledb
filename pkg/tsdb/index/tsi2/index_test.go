@@ -32,7 +32,7 @@ func GetTagPairsExample(suffix string) []tsi2.TagPair {
 }
 
 func TestInitAndGetSeriesID(t *testing.T) {
-	gi := tsi2.NewGridIndex(tsi2.NewAnalyzer(10))
+	gi := tsi2.NewGridIndex(tsi2.NewMultiplierOptimizer(10, 1))
 	// first series
 	ok, id := gi.InitNewSeriesID(GetTagPairsExample("0"))
 	assert.Equal(t, ok, true)
@@ -89,13 +89,18 @@ func Contains(a, b []int64) bool {
 	return true
 }
 
-func GetManyTagPairs(tagKeyNum, tagValueNum int) ([][]tsi2.TagPair) {
+// GetManyTagPairs: return many tag pair sets.
+// For example, tagKeyNum = 2, tagValueNum = 5, then return  
+// [[{a 0} {b 0}] [{a 1} {b 1}]     [{a 2} {b 2}] [{a 3} {b 3}] [{a 4} {b 4}]].
+// Another example, tagKeyNum = 2, tagValueNum = 5, then return
+// [[{a 0} {b 0} {c 0}] [{a 1} {b 1} {c 1}]]	
+func GetManyTagPairs(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
 	manyTagPairs := [][]tsi2.TagPair{}
 	for i := 0; i < tagValueNum; i++ {
 		tagPairs := []tsi2.TagPair{}
 		for j := 0; j < tagKeyNum; j++ {
 			tagPairs = append(tagPairs, tsi2.TagPair{
-				TagKey: fmt.Sprintf("%c", 'a'+j),
+				TagKey:   fmt.Sprintf("%c", 'a'+j),
 				TagValue: fmt.Sprintf("%d", i),
 			})
 		}
@@ -105,11 +110,38 @@ func GetManyTagPairs(tagKeyNum, tagValueNum int) ([][]tsi2.TagPair) {
 }
 
 func TestMultiGrid(t *testing.T) {
-	gi := tsi2.NewGridIndex(tsi2.NewAnalyzer(2))
+	gi := tsi2.NewGridIndex(tsi2.NewMultiplierOptimizer(2, 1))
 	manyTagPairs := GetManyTagPairs(2, 5)
 	manyTagPairs2 := GetManyTagPairs(3, 2)
 	manyTagPairs = append(manyTagPairs, manyTagPairs2...)
 	wanted := []int64{0, 3, 4, 7, 8, 12, 19}
+	for i, tagPairs := range manyTagPairs {
+		if len(tagPairs) == 3 {
+			ok, id := gi.InitNewSeriesID(tagPairs)
+			assert.Equal(t, true, ok)
+			assert.Equal(t, wanted[i], id)
+			continue
+		}
+		ok, id := gi.InitNewSeriesID(tagPairs)
+		assert.Equal(t, true, ok)
+		assert.Equal(t, wanted[i], id)
+	}
+}
+
+func TestMultiGridWithMultiplier(t *testing.T) {
+	gi := tsi2.NewGridIndex(tsi2.NewMultiplierOptimizer(2, 2))
+	manyTagPairs := GetManyTagPairs(2, 5)
+	manyTagPairs2 := GetManyTagPairs(3, 2)
+	manyTagPairs = append(manyTagPairs, manyTagPairs2...)
+	// tagKeyNum = 2, tagValueNum = 5 
+	// [[{a 0} {b 0}] [{a 1} {b 1}]     [{a 2} {b 2}] [{a 3} {b 3}] [{a 4} {b 4}]].
+	//            2 * 2									4 * 4
+	//        0             3                 4             9            14
+	// tagKeyNum = 2, tagValueNum = 5
+	// [[{a 0} {b 0} {c 0}] [{a 1} {b 1} {c 1}]]
+	// 					4 * 4 * 2
+	//           20		            31	
+	wanted := []int64{0, 3, 4, 9, 14, 20, 31}
 	for i, tagPairs := range manyTagPairs {
 		if len(tagPairs) == 3 {
 			ok, id := gi.InitNewSeriesID(tagPairs)

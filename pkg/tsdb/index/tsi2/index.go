@@ -7,18 +7,20 @@ type TagPair struct {
 
 type GridIndex struct {
 	grids    []*Grid
-	analyzer *Analyzer
+	optimizer Optimizer
+	// number of tag values of each tag key
+	tagValueCnt map[string]int
 }
 
-func NewGridIndex(analyzer *Analyzer) *GridIndex {
+func NewGridIndex(optimizer *MultiplierOptimizer) *GridIndex {
 	return &GridIndex{
 		grids:    []*Grid{},
-		analyzer: analyzer,
+		optimizer: optimizer,
 	}
 }
 
-func (gi *GridIndex) WithAnalyzer(analyzer *Analyzer) {
-	gi.analyzer = analyzer
+func (gi *GridIndex) WithAnalyzer(analyzer *MultiplierOptimizer) {
+	gi.optimizer = analyzer
 }
 
 // GetSeriesIDsWithTagPairs: TODO(vinland-avalon): will return some fake ids
@@ -94,16 +96,18 @@ func (gi *GridIndex) InitNewSeriesID(tagPairs []TagPair) (bool, int64) {
 }
 
 func (gi *GridIndex) newGridAndSeriesIDWithTagPairs(tagPairs []TagPair) int64 {
-	offset := int64(0)
-	if len(gi.grids) != 0 {
-		lastGrid := gi.grids[len(gi.grids)-1]
-		lastGridLength := lastGrid.CalLength()
-		offset = lastGrid.offset + int64(lastGridLength)
-	}
-
-	tagValuess := gi.analyzer.OptimizeWithTagValuess(tagPairs)
-	grid := newGrid(offset, tagPairs, tagValuess)
+	grid := gi.optimizer.NewOptimizedGridWithInfo(gi, tagPairs)
 	gi.grids = append(gi.grids, grid)
 
 	return grid.offset
+}
+
+func (gi* GridIndex) GetNumOfFilledUpGridForSingleTagKey(tagKey string) int {
+	cnt := 0
+	for _, g := range gi.grids {
+		if g.IfTagKeyExistAndFilledUp(tagKey) {
+			cnt++;
+		}
+	}
+	return cnt
 }
