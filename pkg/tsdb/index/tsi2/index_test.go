@@ -90,10 +90,10 @@ func Contains(a, b []int64) bool {
 }
 
 // GetManyTagPairs: return many tag pair sets.
-// For example, tagKeyNum = 2, tagValueNum = 5, then return  
-// [[{a 0} {b 0}] [{a 1} {b 1}]     [{a 2} {b 2}] [{a 3} {b 3}] [{a 4} {b 4}]].
+// For example, tagKeyNum = 2, tagValueNum = 5, then return
+// [[{a 0} {b 0}] [{a 1} {b 1}] [{a 2} {b 2}] [{a 3} {b 3}] [{a 4} {b 4}]].
 // Another example, tagKeyNum = 2, tagValueNum = 5, then return
-// [[{a 0} {b 0} {c 0}] [{a 1} {b 1} {c 1}]]	
+// [[{a 0} {b 0} {c 0}] [{a 1} {b 1} {c 1}]]
 func GetManyTagPairs(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
 	manyTagPairs := [][]tsi2.TagPair{}
 	for i := 0; i < tagValueNum; i++ {
@@ -133,14 +133,14 @@ func TestMultiGridWithMultiplier(t *testing.T) {
 	manyTagPairs := GetManyTagPairs(2, 5)
 	manyTagPairs2 := GetManyTagPairs(3, 2)
 	manyTagPairs = append(manyTagPairs, manyTagPairs2...)
-	// tagKeyNum = 2, tagValueNum = 5 
+	// tagKeyNum = 2, tagValueNum = 5
 	// [[{a 0} {b 0}] [{a 1} {b 1}]     [{a 2} {b 2}] [{a 3} {b 3}] [{a 4} {b 4}]].
 	//            2 * 2									4 * 4
 	//        0             3                 4             9            14
 	// tagKeyNum = 2, tagValueNum = 5
 	// [[{a 0} {b 0} {c 0}] [{a 1} {b 1} {c 1}]]
 	// 					4 * 4 * 2
-	//           20		            31	
+	//           20		            31
 	wanted := []int64{0, 3, 4, 9, 14, 20, 31}
 	for i, tagPairs := range manyTagPairs {
 		if len(tagPairs) == 3 {

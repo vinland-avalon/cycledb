@@ -6,15 +6,13 @@ type TagPair struct {
 }
 
 type GridIndex struct {
-	grids    []*Grid
+	grids     []*Grid
 	optimizer Optimizer
-	// number of tag values of each tag key
-	tagValueCnt map[string]int
 }
 
 func NewGridIndex(optimizer *MultiplierOptimizer) *GridIndex {
 	return &GridIndex{
-		grids:    []*Grid{},
+		grids:     []*Grid{},
 		optimizer: optimizer,
 	}
 }
@@ -102,11 +100,11 @@ func (gi *GridIndex) newGridAndSeriesIDWithTagPairs(tagPairs []TagPair) int64 {
 	return grid.offset
 }
 
-func (gi* GridIndex) GetNumOfFilledUpGridForSingleTagKey(tagKey string) int {
+func (gi *GridIndex) GetNumOfFilledUpGridForSingleTagKey(tagKey string) int {
 	cnt := 0
 	for _, g := range gi.grids {
 		if g.IfTagKeyExistAndFilledUp(tagKey) {
-			cnt++;
+			cnt++
 		}
 	}
 	return cnt
