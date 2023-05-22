@@ -12,9 +12,12 @@ test:
 	go test -v ./...
 
 benchmark:
-	go test -bench=. -run=none -benchmem -memprofile=./benchmark_result/mem_profile.out -cpuprofile=./benchmark_result/cpu_profile.out
+	go test -bench=. -run=none -benchmem
 
-benchmark_txt:
-	go test -bench=. -run=none -benchmem -memprofile=mem_profile.txt -cpuprofile=cpu_profile.txt
+benchmark_params:
+	go test -bench=. -run=none -benchmem -args -tagKeyNum=$(TAG_KEY_NUM) -tagValueNum=$(TAG_VALUE_NUM)
+
+benchmark_pprof:
+	go test -bench=. -run=none -benchmem -memprofile=./benchmark_result/mem_profile.out -cpuprofile=./benchmark_result/cpu_profile.out
 
 
