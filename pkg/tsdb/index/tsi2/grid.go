@@ -1,45 +1,5 @@
 package tsi2
 
-type TagValues struct {
-	capacity int
-	// TODO(vinland-avalon): any
-	values       []string
-	valueToIndex map[string]int
-}
-
-func newTagValues(cap int) *TagValues {
-	return &TagValues{
-		capacity:     cap,
-		values:       []string{},
-		valueToIndex: map[string]int{},
-	}
-}
-
-// SetValue: return whether set succeed.
-// If already exist or append new value to the end, return true.
-// If reach capacity, return false.
-func (tvs *TagValues) SetValue(v string) bool {
-	if tvs.capacity == len(tvs.values) {
-		return false
-	}
-	if _, ok := tvs.valueToIndex[v]; ok {
-		return true
-	}
-
-	tvs.valueToIndex[v] = len(tvs.values)
-	tvs.values = append(tvs.values, v)
-	return true
-}
-
-// GetValueIndex: return -1 if not exist
-func (tvs *TagValues) GetValueIndex(value string) int {
-	if index, ok := tvs.valueToIndex[value]; !ok {
-		return -1
-	} else {
-		return index
-	}
-}
-
 type Grid struct {
 	// the grids are linked, so id should skip
 	offset int64
@@ -74,11 +34,11 @@ func (g *Grid) CalLength() int {
 	return length
 }
 
-func (g *Grid) IfTagPairExist(tagKey, tagValue string) bool {
-	if tagValuesIndex, ok := g.tagKeyToIndex[tagKey]; !ok {
+func (g *Grid) IfTagPairExist(tagPair TagPair) bool {
+	if tagValuesIndex, ok := g.tagKeyToIndex[tagPair.TagKey]; !ok {
 		return false
 	} else {
-		if g.tagValuess[tagValuesIndex].GetValueIndex(tagValue) == -1 {
+		if g.tagValuess[tagValuesIndex].GetValueIndex(tagPair.TagValue) == -1 {
 			return false
 		} else {
 			return true
@@ -87,15 +47,15 @@ func (g *Grid) IfTagPairExist(tagKey, tagValue string) bool {
 }
 
 // GetIDsForSingleTagPair: return ids for a specific tag key and tag value
-func (g *Grid) GetIDsForSingleTagPair(tagKey, tagValue string) []int64 {
+func (g *Grid) GetIDsForSingleTagPair(tagPair TagPair) []int64 {
 	ids := []int64{}
-	if !g.IfTagPairExist(tagKey, tagValue) {
+	if !g.IfTagPairExist(tagPair) {
 		return ids
 	}
 
-	tagKeyIndex := g.tagKeyToIndex[tagKey]
+	tagKeyIndex := g.tagKeyToIndex[tagPair.TagKey]
 	tagValues := g.tagValuess[tagKeyIndex]
-	tagValueIndex := tagValues.GetValueIndex(tagValue)
+	tagValueIndex := tagValues.GetValueIndex(tagPair.TagValue)
 
 	duration := int64(1)
 	for i := g.capacity - 1; i > tagKeyIndex; i-- {
@@ -205,4 +165,45 @@ func (g *Grid) IfTagKeyExistAndFilledUp(tagKey string) bool {
 		return true
 	}
 	return false
+}
+
+func (g *Grid) GetSeriesIDsWithTagPairs(tagPairs []TagPair) []int64 {
+	// check if tag pairs match
+	if len(tagPairs) > len(g.tagKeys) {
+		return []int64{}
+	}
+	for _, tagPair := range tagPairs {
+		if !g.IfTagPairExist(tagPair) {
+			return []int64{}
+		}
+	}
+
+	// TODO(vinland-avalon): not support non-condition search so far
+	if len(tagPairs) == 0 {
+		return []int64{}
+	}
+
+	dimensions := make([][]int, 0, len(g.tagKeys))
+	for i := range g.tagKeys {
+		dimensions = append(dimensions, []int{-1, g.tagValuess[i].capacity})
+	}
+	for _, tagPair := range tagPairs {
+		idx := g.tagKeyToIndex[tagPair.TagKey]
+		valueIdx := g.tagValuess[idx].GetValueIndex(tagPair.TagValue)
+		dimensions[idx][0] = valueIdx
+	}
+
+	prev := []int64{}
+	if dimensions[0][0] != -1 {
+		prev = append(prev, int64(dimensions[0][0]))
+	} else {
+		for i := 0; i < dimensions[0][1]; i++ {
+			prev = append(prev, int64(i))
+		}
+	}
+	ids := VariableBaseConvert(dimensions, 1, prev)
+	for i := range ids {
+		ids[i] += g.offset
+	}
+	return ids
 }

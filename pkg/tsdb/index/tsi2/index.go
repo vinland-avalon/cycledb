@@ -23,39 +23,9 @@ func (gi *GridIndex) WithAnalyzer(analyzer *MultiplierOptimizer) {
 
 // GetSeriesIDsWithTagPairs: TODO(vinland-avalon): will return some fake ids
 func (gi *GridIndex) GetSeriesIDsWithTagPairs(tagPairs []TagPair) []int64 {
-	convertToMapI64 := func(ids []int64) map[int64]struct{} {
-		m := map[int64]struct{}{}
-		for _, id := range ids {
-			m[id] = struct{}{}
-		}
-		return m
-	}
-	ids := []int64{}
-	// TODO(vinland-avalon): not support non-condition search so far
-	if len(tagPairs) == 0 {
-		return ids
-	}
-
-	idsSet := convertToMapI64(gi.getSeriesIDsForSingleTagPair(tagPairs[0]))
-	for i := 1; i < len(tagPairs); i++ {
-		currIdsSet := convertToMapI64(gi.getSeriesIDsForSingleTagPair(tagPairs[i]))
-		for k := range idsSet {
-			if _, ok := currIdsSet[k]; !ok {
-				delete(idsSet, k)
-			}
-		}
-	}
-
-	for k := range idsSet {
-		ids = append(ids, k)
-	}
-	return ids
-}
-
-func (gi *GridIndex) getSeriesIDsForSingleTagPair(p TagPair) []int64 {
 	ids := []int64{}
 	for _, grid := range gi.grids {
-		ids = append(ids, grid.GetIDsForSingleTagPair(p.TagKey, p.TagValue)...)
+		ids = append(ids, grid.GetSeriesIDsWithTagPairs(tagPairs)...)
 	}
 	return ids
 }
@@ -71,26 +41,24 @@ func (gi *GridIndex) getStrictlyMatchedSeriesIDForTagPairs(tagPairs []TagPair) i
 	return int64(-1)
 }
 
-// SetSeriesID: If the ID already exist, return false.
-// Else init a new series id for the tag pairs.
-// Both return corresponding id
-func (gi *GridIndex) InitNewSeriesID(tagPairs []TagPair) (bool, int64) {
+// SetSeriesID: return corresponding id
+func (gi *GridIndex) InitNewSeriesID(tagPairs []TagPair) int64 {
 	// if already exist
 	id := gi.getStrictlyMatchedSeriesIDForTagPairs(tagPairs)
 	if id != -1 {
-		return false, id
+		return id
 	}
 
 	// if it can be represented in existed grids
 	for _, grid := range gi.grids {
-		if ok, ids := grid.InsertTagPairs(tagPairs); ok {
-			return true, ids
+		if ok, id := grid.InsertTagPairs(tagPairs); ok {
+			return id
 		}
 	}
 
 	// else create a new grid
 	id = gi.newGridAndSeriesIDWithTagPairs(tagPairs)
-	return true, id
+	return id
 }
 
 func (gi *GridIndex) newGridAndSeriesIDWithTagPairs(tagPairs []TagPair) int64 {
