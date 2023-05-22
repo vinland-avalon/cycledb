@@ -11,19 +11,19 @@ import (
 
 var (
 	tagKeyNum   int = 3
-	tagValueNum int = 10
+	tagValueNum int = 4
 )
 
 func TestGenerateQuery(t *testing.T) {
 	queries := GenerateQueryTagPairs(tagKeyNum, tagValueNum)
 	assert.Equal(t, tsi2.PowInt((tagValueNum+1), tagKeyNum)-1, len(queries))
-	fmt.Printf("%v\n", queries)
+	// fmt.Printf("%v\n", queries)
 }
 
 func TestGenerateInserts(t *testing.T) {
 	inserts := GenerateFullPermutationTags(tagKeyNum, tagValueNum, false)
 	assert.Equal(t, tsi2.PowInt(tagValueNum, tagKeyNum), len(inserts))
-	fmt.Printf("%v\n", inserts)
+	// fmt.Printf("%v\n", inserts)
 }
 
 // GenerateFullPermutationTags: returns all permutations of tag pairs.
@@ -134,10 +134,8 @@ func BenchmarkGridIndex(b *testing.B) {
 	}
 }
 
-// 3,4	BenchmarkGridIndexQuery-16    	     487	   2428514 ns/op	 2356831 B/op	   10371 allocs/op
-// 3,4 BenchmarkGridIndexQuery-16    	     778	   1518902 ns/op	 1324924 B/op	    6388 allocs/op
-// 3,10	BenchmarkGridIndexQuery-16    	       6	 187527690 ns/op	226902552 B/op	  277889 allocs/op
-// 3,10	BenchmarkGridIndexQuery-16    	       7	 163562836 ns/op	164692252 B/op	  209736 allocs/op
+// 3,4	BenchmarkGridIndexQuery-16    	   20282	     58325 ns/op	   58608 B/op	    1200 allocs/op
+// 3,10	BenchmarkGridIndexQuery-16    	    1542	    804862 ns/op	  822889 B/op	   10196 allocs/op
 func BenchmarkGridIndexQuery(b *testing.B) {
 	manyTagPairs := GenerateFullPermutationTags(tagKeyNum, tagValueNum, false)
 	gi := tsi2.NewGridIndex(tsi2.NewMultiplierOptimizer(2, 2))

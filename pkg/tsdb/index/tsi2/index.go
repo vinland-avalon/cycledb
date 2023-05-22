@@ -41,26 +41,24 @@ func (gi *GridIndex) getStrictlyMatchedSeriesIDForTagPairs(tagPairs []TagPair) i
 	return int64(-1)
 }
 
-// SetSeriesID: If the ID already exist, return false.
-// Else init a new series id for the tag pairs.
-// Both return corresponding id
-func (gi *GridIndex) InitNewSeriesID(tagPairs []TagPair) (bool, int64) {
+// SetSeriesID: return corresponding id
+func (gi *GridIndex) InitNewSeriesID(tagPairs []TagPair) int64 {
 	// if already exist
 	id := gi.getStrictlyMatchedSeriesIDForTagPairs(tagPairs)
 	if id != -1 {
-		return false, id
+		return id
 	}
 
 	// if it can be represented in existed grids
 	for _, grid := range gi.grids {
-		if ok, ids := grid.InsertTagPairs(tagPairs); ok {
-			return true, ids
+		if ok, id := grid.InsertTagPairs(tagPairs); ok {
+			return id
 		}
 	}
 
 	// else create a new grid
 	id = gi.newGridAndSeriesIDWithTagPairs(tagPairs)
-	return true, id
+	return id
 }
 
 func (gi *GridIndex) newGridAndSeriesIDWithTagPairs(tagPairs []TagPair) int64 {

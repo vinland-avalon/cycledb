@@ -183,27 +183,27 @@ func (g *Grid) GetSeriesIDsWithTagPairs(tagPairs []TagPair) []int64 {
 		return []int64{}
 	}
 
-	// do search and intersection
-	convertToMapI64 := func(ids []int64) map[int64]struct{} {
-		m := map[int64]struct{}{}
-		for _, id := range ids {
-			m[id] = struct{}{}
-		}
-		return m
+	dimensions := make([][]int, 0, len(g.tagKeys))
+	for i := range g.tagKeys {
+		dimensions = append(dimensions, []int{-1, g.tagValuess[i].capacity})
 	}
-	ids := []int64{}
-	idsSet := convertToMapI64(g.GetIDsForSingleTagPair(tagPairs[0]))
-	for i := 1; i < len(tagPairs); i++ {
-		currIdsSet := convertToMapI64(g.GetIDsForSingleTagPair(tagPairs[i]))
-		for k := range idsSet {
-			if _, ok := currIdsSet[k]; !ok {
-				delete(idsSet, k)
-			}
-		}
+	for _, tagPair := range tagPairs {
+		idx := g.tagKeyToIndex[tagPair.TagKey]
+		valueIdx := g.tagValuess[idx].GetValueIndex(tagPair.TagValue)
+		dimensions[idx][0] = valueIdx
 	}
 
-	for k := range idsSet {
-		ids = append(ids, k)
+	prev := []int64{}
+	if dimensions[0][0] != -1 {
+		prev = append(prev, int64(dimensions[0][0]))
+	} else {
+		for i := 0; i < dimensions[0][1]; i++ {
+			prev = append(prev, int64(i))
+		}
+	}
+	ids := VariableBaseConvert(dimensions, 1, prev)
+	for i := range ids {
+		ids[i] += g.offset
 	}
 	return ids
 }
