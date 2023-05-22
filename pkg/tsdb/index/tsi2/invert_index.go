@@ -12,9 +12,9 @@ type InvertIndex struct {
 
 func NewInvertIndex() *InvertIndex {
 	return &InvertIndex{
-		invertIndex: map[string]map[string][]int64{},
+		invertIndex:     map[string]map[string][]int64{},
 		idToTagPairsMap: map[int64][]TagPair{},
-		idCnt:       0,
+		idCnt:           0,
 	}
 }
 
@@ -54,7 +54,7 @@ func (ii *InvertIndex) getSeriesIDsForSingleTagPair(tagPair TagPair) []int64 {
 
 func (ii *InvertIndex) InitNewSeriesID(tagPairs []TagPair) (bool, int64) {
 	currId := ii.idCnt
-	
+
 	// check if the tagPairs already exists in index
 	if idFound := ii.getStrictlyMatchedSeriesIDForTagPairs(tagPairs); idFound != -1 {
 		return false, idFound
@@ -77,7 +77,7 @@ func (ii *InvertIndex) InitNewSeriesID(tagPairs []TagPair) (bool, int64) {
 func (ii *InvertIndex) getStrictlyMatchedSeriesIDForTagPairs(tagPairs []TagPair) int64 {
 	ids := ii.GetSeriesIDsWithTagPairs(tagPairs)
 	for _, id := range ids {
-		if (IfTagPairsEqual(ii.idToTagPairsMap[id], tagPairs)) {
+		if IfTagPairsEqual(ii.idToTagPairsMap[id], tagPairs) {
 			return id
 		}
 	}

@@ -126,6 +126,11 @@ func TestMultiGrid(t *testing.T) {
 		assert.Equal(t, true, ok)
 		assert.Equal(t, wanted[i], id)
 	}
+
+	for i, tagPairs := range manyTagPairs {
+		ids := gi.GetSeriesIDsWithTagPairs(tagPairs)
+		assert.True(t, Contains(ids, []int64{wanted[i]}))
+	}
 }
 
 func TestMultiGridWithMultiplier(t *testing.T) {
@@ -152,5 +157,10 @@ func TestMultiGridWithMultiplier(t *testing.T) {
 		ok, id := gi.InitNewSeriesID(tagPairs)
 		assert.Equal(t, true, ok)
 		assert.Equal(t, wanted[i], id)
+	}
+
+	for i, tagPairs := range manyTagPairs {
+		ids := gi.GetSeriesIDsWithTagPairs(tagPairs)
+		assert.True(t, Contains(ids, []int64{wanted[i]}))
 	}
 }
