@@ -1,0 +1,120 @@
+go test -bench=. -run=none -benchmem -args -tagKeyNum=3 -tagValueNum=4
+*************** tagKeyNum = 3, tagValueNum = 4 *******************
+goos: linux
+goarch: amd64
+pkg: cycledb/pkg/tsdb/index/tsi2
+cpu: Intel(R) Xeon(R) Gold 6330 CPU @ 2.00GHz
+BenchmarkInvertIndex-112                    6438            159590 ns/op           19223 B/op        248 allocs/op
+BenchmarkInvertIndexQuery-112               2102            512453 ns/op           75669 B/op        870 allocs/op
+BenchmarkGridIndex-112                     22890             53744 ns/op            6424 B/op         96 allocs/op
+BenchmarkGridIndexQuery-112                 6523            232631 ns/op           58608 B/op       1200 allocs/op
+PASS
+ok      cycledb/pkg/tsdb/index/tsi2     5.516s
+go test -bench=. -run=none -benchmem -args -tagKeyNum=3 -tagValueNum=5
+*************** tagKeyNum = 3, tagValueNum = 5 *******************
+goos: linux
+goarch: amd64
+pkg: cycledb/pkg/tsdb/index/tsi2
+cpu: Intel(R) Xeon(R) Gold 6330 CPU @ 2.00GHz
+BenchmarkInvertIndex-112                    2538            422287 ns/op           50721 B/op        569 allocs/op
+BenchmarkInvertIndexQuery-112                974           1235597 ns/op          148909 B/op       1805 allocs/op
+BenchmarkGridIndex-112                     12387             98670 ns/op            8496 B/op        124 allocs/op
+BenchmarkGridIndexQuery-112                 2534            478601 ns/op          120153 B/op       2005 allocs/op
+PASS
+ok      cycledb/pkg/tsdb/index/tsi2     5.788s
+go test -bench=. -run=none -benchmem -args -tagKeyNum=3 -tagValueNum=6
+*************** tagKeyNum = 3, tagValueNum = 6 *******************
+goos: linux
+goarch: amd64
+pkg: cycledb/pkg/tsdb/index/tsi2
+cpu: Intel(R) Xeon(R) Gold 6330 CPU @ 2.00GHz
+BenchmarkInvertIndex-112                     981           1133391 ns/op          149954 B/op       1235 allocs/op
+BenchmarkInvertIndexQuery-112                393           3332560 ns/op          477096 B/op       3638 allocs/op
+BenchmarkGridIndex-112                      9433            127331 ns/op            7000 B/op        102 allocs/op
+BenchmarkGridIndexQuery-112                 2107            557800 ns/op          121073 B/op       2856 allocs/op
+PASS
+ok      cycledb/pkg/tsdb/index/tsi2     6.299s
+go test -bench=. -run=none -benchmem -args -tagKeyNum=3 -tagValueNum=7
+*************** tagKeyNum = 3, tagValueNum = 7 *******************
+goos: linux
+goarch: amd64
+pkg: cycledb/pkg/tsdb/index/tsi2
+cpu: Intel(R) Xeon(R) Gold 6330 CPU @ 2.00GHz
+BenchmarkInvertIndex-112                     498           2333993 ns/op          298262 B/op       2324 allocs/op
+BenchmarkInvertIndexQuery-112                225           5581131 ns/op          751119 B/op       6357 allocs/op
+BenchmarkGridIndex-112                      4753            222077 ns/op            8816 B/op        126 allocs/op
+BenchmarkGridIndexQuery-112                 1234           1036167 ns/op          257492 B/op       4152 allocs/op
+PASS
+ok      cycledb/pkg/tsdb/index/tsi2     5.709s
+go test -bench=. -run=none -benchmem -args -tagKeyNum=3 -tagValueNum=8
+*************** tagKeyNum = 3, tagValueNum = 8 *******************
+goos: linux
+goarch: amd64
+pkg: cycledb/pkg/tsdb/index/tsi2
+cpu: Intel(R) Xeon(R) Gold 6330 CPU @ 2.00GHz
+BenchmarkInvertIndex-112                     242           4886414 ns/op          671877 B/op       4212 allocs/op
+BenchmarkInvertIndexQuery-112                100          12799279 ns/op         2131658 B/op      11118 allocs/op
+BenchmarkGridIndex-112                      3446            310908 ns/op            8848 B/op        127 allocs/op
+BenchmarkGridIndexQuery-112                  844           1577465 ns/op          383284 B/op       5746 allocs/op
+PASS
+ok      cycledb/pkg/tsdb/index/tsi2     5.610s
+go test -bench=. -run=none -benchmem -args -tagKeyNum=3 -tagValueNum=9
+*************** tagKeyNum = 3, tagValueNum = 9 *******************
+goos: linux
+goarch: amd64
+pkg: cycledb/pkg/tsdb/index/tsi2
+cpu: Intel(R) Xeon(R) Gold 6330 CPU @ 2.00GHz
+BenchmarkInvertIndex-112                     139           8438290 ns/op         1197050 B/op       6874 allocs/op
+BenchmarkInvertIndexQuery-112                 86          20372579 ns/op         3008673 B/op      16490 allocs/op
+BenchmarkGridIndex-112                      2248            495209 ns/op           11945 B/op        155 allocs/op
+BenchmarkGridIndexQuery-112                  463           2578574 ns/op          696293 B/op       7882 allocs/op
+PASS
+ok      cycledb/pkg/tsdb/index/tsi2     6.475s
+go test -bench=. -run=none -benchmem -args -tagKeyNum=3 -tagValueNum=10
+*************** tagKeyNum = 3, tagValueNum = 10 *******************
+goos: linux
+goarch: amd64
+pkg: cycledb/pkg/tsdb/index/tsi2
+cpu: Intel(R) Xeon(R) Gold 6330 CPU @ 2.00GHz
+BenchmarkInvertIndex-112                      93          14098896 ns/op         1895128 B/op      10698 allocs/op
+BenchmarkInvertIndexQuery-112                 32          32580466 ns/op         4188279 B/op      25752 allocs/op
+BenchmarkGridIndex-112                      1760            668330 ns/op           11985 B/op        156 allocs/op
+BenchmarkGridIndexQuery-112                  373           3369249 ns/op          822892 B/op      10196 allocs/op
+PASS
+ok      cycledb/pkg/tsdb/index/tsi2     5.296s
+go test -bench=. -run=none -benchmem -args -tagKeyNum=3 -tagValueNum=4
+*************** tagKeyNum = 3, tagValueNum = 4 *******************
+goos: linux
+goarch: amd64
+pkg: cycledb/pkg/tsdb/index/tsi2
+cpu: Intel(R) Xeon(R) Gold 6330 CPU @ 2.00GHz
+BenchmarkInvertIndex-112                    6789            159299 ns/op           19212 B/op        248 allocs/op
+BenchmarkInvertIndexQuery-112               2314            524154 ns/op           75690 B/op        870 allocs/op
+BenchmarkGridIndex-112                     22465             51968 ns/op            6424 B/op         96 allocs/op
+BenchmarkGridIndexQuery-112                 7058            239657 ns/op           58608 B/op       1200 allocs/op
+PASS
+ok      cycledb/pkg/tsdb/index/tsi2     5.819s
+go test -bench=. -run=none -benchmem -args -tagKeyNum=4 -tagValueNum=4
+*************** tagKeyNum = 4, tagValueNum = 4 *******************
+goos: linux
+goarch: amd64
+pkg: cycledb/pkg/tsdb/index/tsi2
+cpu: Intel(R) Xeon(R) Gold 6330 CPU @ 2.00GHz
+BenchmarkInvertIndex-112                     446           2602659 ns/op          354989 B/op       2527 allocs/op
+BenchmarkInvertIndexQuery-112                100          12015630 ns/op         1890006 B/op      10438 allocs/op
+BenchmarkGridIndex-112                      7203            166367 ns/op            7736 B/op        112 allocs/op
+BenchmarkGridIndexQuery-112                  912           1234379 ns/op          294563 B/op       5834 allocs/op
+PASS
+ok      cycledb/pkg/tsdb/index/tsi2     6.137s
+go test -bench=. -run=none -benchmem -args -tagKeyNum=5 -tagValueNum=4
+*************** tagKeyNum = 5, tagValueNum = 4 *******************
+goos: linux
+goarch: amd64
+pkg: cycledb/pkg/tsdb/index/tsi2
+cpu: Intel(R) Xeon(R) Gold 6330 CPU @ 2.00GHz
+BenchmarkInvertIndex-112                      26          43480400 ns/op         6010024 B/op      20885 allocs/op
+BenchmarkInvertIndexQuery-112                  4         277966041 ns/op        40069666 B/op     100045 allocs/op
+BenchmarkGridIndex-112                      1432            811479 ns/op           12328 B/op        172 allocs/op
+BenchmarkGridIndexQuery-112                   97          12385961 ns/op         4693954 B/op      33775 allocs/op
+PASS
+ok      cycledb/pkg/tsdb/index/tsi2     7.004s
