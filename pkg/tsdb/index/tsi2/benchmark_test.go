@@ -11,7 +11,7 @@ import (
 
 var (
 	tagKeyNum   int = 3
-	tagValueNum int = 10
+	tagValueNum int = 4
 )
 
 func TestGenerateQuery(t *testing.T) {
@@ -135,7 +135,9 @@ func BenchmarkGridIndex(b *testing.B) {
 }
 
 // 3,4	BenchmarkGridIndexQuery-16    	     487	   2428514 ns/op	 2356831 B/op	   10371 allocs/op
+// 3,4 BenchmarkGridIndexQuery-16    	     778	   1518902 ns/op	 1324924 B/op	    6388 allocs/op
 // 3,10	BenchmarkGridIndexQuery-16    	       6	 187527690 ns/op	226902552 B/op	  277889 allocs/op
+// 3,10	BenchmarkGridIndexQuery-16    	       6	 167666984 ns/op	164704712 B/op	  209810 allocs/op
 func BenchmarkGridIndexQuery(b *testing.B) {
 	manyTagPairs := GenerateFullPermutationTags(tagKeyNum, tagValueNum, false)
 	gi := tsi2.NewGridIndex(tsi2.NewMultiplierOptimizer(2, 2))

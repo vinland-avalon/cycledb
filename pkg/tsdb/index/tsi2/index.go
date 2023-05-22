@@ -23,39 +23,9 @@ func (gi *GridIndex) WithAnalyzer(analyzer *MultiplierOptimizer) {
 
 // GetSeriesIDsWithTagPairs: TODO(vinland-avalon): will return some fake ids
 func (gi *GridIndex) GetSeriesIDsWithTagPairs(tagPairs []TagPair) []int64 {
-	convertToMapI64 := func(ids []int64) map[int64]struct{} {
-		m := map[int64]struct{}{}
-		for _, id := range ids {
-			m[id] = struct{}{}
-		}
-		return m
-	}
-	ids := []int64{}
-	// TODO(vinland-avalon): not support non-condition search so far
-	if len(tagPairs) == 0 {
-		return ids
-	}
-
-	idsSet := convertToMapI64(gi.getSeriesIDsForSingleTagPair(tagPairs[0]))
-	for i := 1; i < len(tagPairs); i++ {
-		currIdsSet := convertToMapI64(gi.getSeriesIDsForSingleTagPair(tagPairs[i]))
-		for k := range idsSet {
-			if _, ok := currIdsSet[k]; !ok {
-				delete(idsSet, k)
-			}
-		}
-	}
-
-	for k := range idsSet {
-		ids = append(ids, k)
-	}
-	return ids
-}
-
-func (gi *GridIndex) getSeriesIDsForSingleTagPair(p TagPair) []int64 {
 	ids := []int64{}
 	for _, grid := range gi.grids {
-		ids = append(ids, grid.GetIDsForSingleTagPair(p.TagKey, p.TagValue)...)
+		ids = append(ids, grid.GetSeriesIDsWithTagPairs(tagPairs)...)
 	}
 	return ids
 }
