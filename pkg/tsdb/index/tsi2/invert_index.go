@@ -3,7 +3,7 @@ package tsi2
 // for benchmark comparation
 type InvertIndex struct {
 	// tagKey -> tagValue -> series ids
-	invertIndex map[string]map[string][]int64
+	invertIndex map[string]map[string]map[int64]struct{}
 	// id -> tag pairs
 	idToTagPairsMap map[int64][]TagPair
 	// TODO(vinland-avalon): concurrency and lock
@@ -12,16 +12,16 @@ type InvertIndex struct {
 
 func NewInvertIndex() *InvertIndex {
 	return &InvertIndex{
-		invertIndex:     map[string]map[string][]int64{},
+		invertIndex:     map[string]map[string]map[int64]struct{}{},
 		idToTagPairsMap: map[int64][]TagPair{},
 		idCnt:           0,
 	}
 }
 
 func (ii *InvertIndex) GetSeriesIDsWithTagPairs(tagPairs []TagPair) []int64 {
-	convertToMapI64 := func(ids []int64) map[int64]struct{} {
+	copyMapI64 := func(ids map[int64]struct{}) map[int64]struct{} {
 		m := map[int64]struct{}{}
-		for _, id := range ids {
+		for id := range ids {
 			m[id] = struct{}{}
 		}
 		return m
@@ -32,9 +32,9 @@ func (ii *InvertIndex) GetSeriesIDsWithTagPairs(tagPairs []TagPair) []int64 {
 		return ids
 	}
 
-	idsSet := convertToMapI64(ii.getSeriesIDsForSingleTagPair(tagPairs[0]))
+	idsSet := copyMapI64(ii.getSeriesIDsForSingleTagPair(tagPairs[0]))
 	for i := 1; i < len(tagPairs); i++ {
-		currIdsSet := convertToMapI64(ii.getSeriesIDsForSingleTagPair(tagPairs[i]))
+		currIdsSet := ii.getSeriesIDsForSingleTagPair(tagPairs[i])
 		for k := range idsSet {
 			if _, ok := currIdsSet[k]; !ok {
 				delete(idsSet, k)
@@ -48,7 +48,7 @@ func (ii *InvertIndex) GetSeriesIDsWithTagPairs(tagPairs []TagPair) []int64 {
 	return ids
 }
 
-func (ii *InvertIndex) getSeriesIDsForSingleTagPair(tagPair TagPair) []int64 {
+func (ii *InvertIndex) getSeriesIDsForSingleTagPair(tagPair TagPair) map[int64]struct{} {
 	return ii.invertIndex[tagPair.TagKey][tagPair.TagValue]
 }
 
@@ -62,12 +62,12 @@ func (ii *InvertIndex) InitNewSeriesID(tagPairs []TagPair) (bool, int64) {
 
 	for _, tagPair := range tagPairs {
 		if _, ok := ii.invertIndex[tagPair.TagKey]; !ok {
-			ii.invertIndex[tagPair.TagKey] = map[string][]int64{}
+			ii.invertIndex[tagPair.TagKey] = map[string]map[int64]struct{}{}
 		}
 		if _, ok := ii.invertIndex[tagPair.TagKey][tagPair.TagValue]; !ok {
-			ii.invertIndex[tagPair.TagKey][tagPair.TagValue] = []int64{}
+			ii.invertIndex[tagPair.TagKey][tagPair.TagValue] = map[int64]struct{}{}
 		}
-		ii.invertIndex[tagPair.TagKey][tagPair.TagValue] = append(ii.invertIndex[tagPair.TagKey][tagPair.TagValue], currId)
+		ii.invertIndex[tagPair.TagKey][tagPair.TagValue][currId] = struct{}{}
 	}
 
 	ii.idCnt++

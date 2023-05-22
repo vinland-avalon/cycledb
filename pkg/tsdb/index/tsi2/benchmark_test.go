@@ -1,6 +1,7 @@
 package tsi2_test
 
 import (
+	"flag"
 	"fmt"
 	"testing"
 
@@ -10,9 +11,19 @@ import (
 )
 
 var (
-	tagKeyNum   int = 3
+	// pTagKeyNum   = flag.Int("tagKeyNum", 3, "number of tag key")
+	// pTagValueNum = flag.Int("tagValueNum", 4, "number of tag value for each tag Key")
+	tagKeyNum int = 3
 	tagValueNum int = 4
 )
+
+func init() {
+	flag.IntVar(&tagKeyNum, "tagKeyNum", 3, "number of tag key")
+	flag.IntVar(&tagValueNum, "tagValueNum", 4, "number of tag value for each tag Key")
+	testing.Init()
+	flag.Parse()
+	fmt.Printf("*************** tagKeyNum = %d, tagValueNum = %d *******************\n", tagKeyNum, tagValueNum)
+}
 
 func TestGenerateQuery(t *testing.T) {
 	queries := GenerateQueryTagPairs(tagKeyNum, tagValueNum)
