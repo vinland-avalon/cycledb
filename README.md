@@ -1,5 +1,5 @@
 # How to run main.go:
-remember go version >= 1.20
+remember go version >= 1.18
 so use `gvm`
 ```sh
 source /home/bohan_wu_ubuntu/.gvm/scripts/gvm (wsl2)
@@ -47,26 +47,31 @@ There are some limits:
 - cache-max-memory-size - When reach, block writes.
 
 ## TSM files
-+--------+------------------------------------+-------------+--------------+
-| Header |               Blocks               |    Index    |    Footer    |
-|5 bytes |              N bytes               |   N bytes   |   4 bytes    |
-+--------+------------------------------------+-------------+--------------+
+```go
+// +--------+------------------------------------+-------------+--------------+
+// | Header |               Blocks               |    Index    |    Footer    |
+// |5 bytes |              N bytes               |   N bytes   |   4 bytes    |
+// +--------+------------------------------------+-------------+--------------+  
+```
 One data block only contains data in just one time-series.  
 Index in fact is `Indexes` containing index entry 1:1 to data block. An index entry is shown as below:
-+-----------------------------------------------------------------------------+
-│                                   Index                                     │
-+-----------------------------------------------------------------------------+
-│ Key Len │   Key   │ Type │ Count │Min Time │Max Time │ Offset │  Size  │...│
-│ 2 bytes │ N bytes │1 byte│2 bytes│ 8 bytes │ 8 bytes │8 bytes │4 bytes │   │
-+-----------------------------------------------------------------------------+
+```go
+// +-----------------------------------------------------------------------------+
+// │                                   Index                                     │
+// +-----------------------------------------------------------------------------+
+// │ Key Len │   Key   │ Type │ Count │Min Time │Max Time │ Offset │  Size  │...│
+// │ 2 bytes │ N bytes │1 byte│2 bytes│ 8 bytes │ 8 bytes │8 bytes │4 bytes │   │
+// +-----------------------------------------------------------------------------+
+```
 Footer contains offset of Index.  
 The data block is compressed as follows:
-+--------------------------------------------------+
-| Type  |  Len  |   Timestamps    |      Values    |
-|1 Byte | VByte |     N Bytes     |    N Bytes     │
-+--------------------------------------------------+
-The Type is about how to compress.
-
+```go
+// +--------------------------------------------------+
+// | Type  |  Len  |   Timestamps    |      Values    |
+// |1 Byte | VByte |     N Bytes     |    N Bytes     │
+// +--------------------------------------------------+
+// The Type is about how to compress.
+```
 ## Compactions
 There are several stages.
 ### Snapshots
