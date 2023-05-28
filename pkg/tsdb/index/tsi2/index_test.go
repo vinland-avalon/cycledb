@@ -150,7 +150,7 @@ func TestMultiGridWithMultiplier(t *testing.T) {
 
 func TestMultiGridWithMultiplier2(t *testing.T) {
 	gi := tsi2.NewGridIndex(tsi2.NewMultiplierOptimizer(2, 2))
-	manyTagPairs := GenerateInsertTagPairs(4, 10)
+	manyTagPairs := gen.GenerateInsertTagPairs(4, 10)
 	ids := make([]int64, 0, len(manyTagPairs))
 
 	for _, tagPairs := range manyTagPairs {
