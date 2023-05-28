@@ -9,8 +9,10 @@ import (
 )
 
 func TestInvertIndex(t *testing.T) {
+	// local variable to overlap `gen` in tsi2_test package
+	gen := generators[DiagonalGen]
 	index := tsi2.NewInvertIndex()
-	manyTagPairs := GetManyTagPairs(2, 5)
+	manyTagPairs := gen.GenerateInsertTagPairs(2, 5)
 	// do insert
 	for i, tagPairs := range manyTagPairs {
 		_, id := index.InitNewSeriesID(tagPairs)
