@@ -6,11 +6,11 @@ import (
 	"cycledb/pkg/tsdb/index/tsi2"
 )
 
-type Full_Permutation_Gen struct{}
+type FullPermutationGen struct{}
 
 // generateFullPermutationTags: returns all permutations of tag pairs.
 // If allow empty, there will be empty tag pair, like [[a:0],[],[c:1]]
-func (g *Full_Permutation_Gen) generateFullPermutationTags(tagKeyNum, tagValueNum int, allowEmpty bool) [][]tsi2.TagPair {
+func (g *FullPermutationGen) generateFullPermutationTags(tagKeyNum, tagValueNum int, allowEmpty bool) [][]tsi2.TagPair {
 	if tagKeyNum == 1 {
 		return g.generateTagPairs(tagKeyNum-1, tagValueNum, allowEmpty)
 	}
@@ -31,7 +31,7 @@ func (g *Full_Permutation_Gen) generateFullPermutationTags(tagKeyNum, tagValueNu
 	return res
 }
 
-func (g *Full_Permutation_Gen) generateTagPairs(tagKeyIndex, tagValueNum int, allowEmpty bool) [][]tsi2.TagPair {
+func (g *FullPermutationGen) generateTagPairs(tagKeyIndex, tagValueNum int, allowEmpty bool) [][]tsi2.TagPair {
 	res := make([][]tsi2.TagPair, 0, tagValueNum)
 	key := fmt.Sprintf("%c", 'a'+tagKeyIndex)
 	if allowEmpty {
@@ -48,14 +48,14 @@ func (g *Full_Permutation_Gen) generateTagPairs(tagKeyIndex, tagValueNum int, al
 	return res
 }
 
-func (g *Full_Permutation_Gen) GenerateInsertTagPairs(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
+func (g *FullPermutationGen) GenerateInsertTagPairs(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
 	return g.generateFullPermutationTags(tagKeyNum, tagValueNum, false)
 }
 
 // GenerateQueryTagPairs: responsible for formatting queries.
 // 1. remove empty tag pairs, [[a:0],[],[c:1]]->[[a:0],[c:1]]
 // 2. remove [[],[],[]] tatally, since grid index not support it
-func (g *Full_Permutation_Gen) GenerateQueryTagPairs(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
+func (g *FullPermutationGen) GenerateQueryTagPairs(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
 	manyTagPairs := g.generateFullPermutationTags(tagKeyNum, tagValueNum, true)
 	for i := 0; i < len(manyTagPairs); i++ {
 		for j := 0; j < len(manyTagPairs[i]); j++ {

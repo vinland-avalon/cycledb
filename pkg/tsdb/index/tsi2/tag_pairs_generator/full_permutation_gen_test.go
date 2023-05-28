@@ -12,7 +12,7 @@ var (
 	tagValueNum int = 4
 )
 
-var g Full_Permutation_Gen
+var g FullPermutationGen
 
 func TestGenerateQuery(t *testing.T) {
 	queries := g.GenerateQueryTagPairs(tagKeyNum, tagValueNum)

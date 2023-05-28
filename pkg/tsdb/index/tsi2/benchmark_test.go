@@ -6,30 +6,41 @@ import (
 	"testing"
 
 	"cycledb/pkg/tsdb/index/tsi2"
-	"cycledb/pkg/tsdb/index/tsi2/tag_pairs_generator"
+	generator "cycledb/pkg/tsdb/index/tsi2/tag_pairs_generator"
 )
 
 var (
-	// pTagKeyNum   = flag.Int("tagKeyNum", 3, "number of tag key")
-	// pTagValueNum = flag.Int("tagValueNum", 4, "number of tag value for each tag Key")
 	tagKeyNum   int = 3
 	tagValueNum int = 4
-	gen generator.Generator
+	// generators
+	generators map[string]generator.Generator
+	genID      string = FPGen
+	gen        generator.Generator
+)
+
+const (
+	FPGen       = "full_permutation_generator"
+	DiagonalGen = "diagonal_generator"
 )
 
 func init() {
 	flag.IntVar(&tagKeyNum, "tagKeyNum", 3, "number of tag key")
 	flag.IntVar(&tagValueNum, "tagValueNum", 4, "number of tag value for each tag Key")
+	flag.StringVar(&genID, "seriesKeyGenerator", FPGen, "generator for tag pairs for benchmark, including full_permutation_generator and diagonal_generator")
 	testing.Init()
 	flag.Parse()
-	fmt.Printf("*************** tagKeyNum = %d, tagValueNum = %d *******************\n", tagKeyNum, tagValueNum)
+	fmt.Printf("*************** tagKeyNum = %d, tagValueNum = %d, seriesKeyGenerator = %s *******************\n", tagKeyNum, tagValueNum, genID)
 
-	gen = &generator.Full_Permutation_Gen{}
+	// register generators
+	generators = map[string]generator.Generator{}
+	generators[FPGen] = &generator.FullPermutationGen{}
+	generators[DiagonalGen] = &generator.DiagonalGenerator{}
+	gen = generators[genID]
 }
 
 // 3,4	BenchmarkInvertIndex-16    	   16528	     74486 ns/op	   29747 B/op	     338 allocs/op
 // 3,10	BenchmarkInvertIndex-16    	     138	   8737311 ns/op	 5415280 B/op	   28821 allocs/op
-func BenchmarkInvertIndex(b *testing.B) {
+func BenchmarkInvertIndexInsert(b *testing.B) {
 	manyTagPairs := gen.GenerateInsertTagPairs(tagKeyNum, tagValueNum)
 	// fmt.Printf("%+v\n", manyTagPairs)
 	b.ResetTimer()
@@ -63,7 +74,7 @@ func BenchmarkInvertIndexQuery(b *testing.B) {
 
 // 3,4	BenchmarkGridIndex-16    	   54880	     21863 ns/op	    6424 B/op	      96 allocs/op
 // 3,10	BenchmarkGridIndex-16    	    3253	    365903 ns/op	   11983 B/op	     156 allocs/op
-func BenchmarkGridIndex(b *testing.B) {
+func BenchmarkGridIndexInsert(b *testing.B) {
 	manyTagPairs := gen.GenerateInsertTagPairs(tagKeyNum, tagValueNum)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
