@@ -21,12 +21,13 @@ var (
 const (
 	FPGen       = "full_permutation_generator"
 	DiagonalGen = "diagonal_generator"
+	RandomGen   = "random_generator"
 )
 
 func init() {
 	flag.IntVar(&tagKeyNum, "tagKeyNum", 3, "number of tag key")
 	flag.IntVar(&tagValueNum, "tagValueNum", 4, "number of tag value for each tag Key")
-	flag.StringVar(&genID, "seriesKeyGenerator", FPGen, "generator for tag pairs for benchmark, including full_permutation_generator and diagonal_generator")
+	flag.StringVar(&genID, "seriesKeyGenerator", FPGen, "generator for tag pairs for benchmark, including full_permutation_generator, diagonal_generator and random_generator")
 	testing.Init()
 	flag.Parse()
 	fmt.Printf("*************** tagKeyNum = %d, tagValueNum = %d, seriesKeyGenerator = %s *******************\n", tagKeyNum, tagValueNum, genID)
@@ -35,6 +36,7 @@ func init() {
 	generators = map[string]generator.Generator{}
 	generators[FPGen] = &generator.FullPermutationGen{}
 	generators[DiagonalGen] = &generator.DiagonalGenerator{}
+	generators[RandomGen] = &generator.RandomGenerator{}
 	gen = generators[genID]
 }
 

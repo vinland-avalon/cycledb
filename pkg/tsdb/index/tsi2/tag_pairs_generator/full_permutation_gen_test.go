@@ -1,10 +1,11 @@
 package generator
 
 import (
-	"cycledb/pkg/tsdb/index/tsi2"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"cycledb/pkg/tsdb/index/tsi2"
 )
 
 var (
