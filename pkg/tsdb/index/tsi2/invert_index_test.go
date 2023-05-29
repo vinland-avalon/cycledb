@@ -12,15 +12,15 @@ func TestInvertIndex(t *testing.T) {
 	// local variable to overlap `gen` in tsi2_test package
 	gen := generators[DiagonalGen]
 	index := tsi2.NewInvertIndex()
-	manyTagPairs := gen.GenerateInsertTagPairs(2, 5)
+	tagPairSets := gen.GenerateInsertTagPairSets(2, 5)
 	// do insert
-	for i, tagPairs := range manyTagPairs {
-		_, id := index.InitNewSeriesID(tagPairs)
+	for i, tagPairSet := range tagPairSets {
+		_, id := index.InitNewSeriesID(tagPairSet)
 		assert.Equal(t, int64(i), id)
 	}
 	// do query
-	for i, tagPairs := range manyTagPairs {
-		realIds := index.GetSeriesIDsWithTagPairs(tagPairs)
+	for i, tagPairSet := range tagPairSets {
+		realIds := index.GetSeriesIDsWithTagPairs(tagPairSet)
 		assert.True(t, Contains(realIds, []int64{int64(i)}))
 	}
 }

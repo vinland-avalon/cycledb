@@ -8,30 +8,30 @@ import (
 
 type DiagonalGenerator struct{}
 
-func (g *DiagonalGenerator) GenerateInsertTagPairs(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
-	return GetManyTagPairs(tagKeyNum, tagValueNum)
+func (g *DiagonalGenerator) GenerateInsertTagPairSets(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
+	return GetDiagonalTagPairSetss(tagKeyNum, tagValueNum)
 }
-func (g *DiagonalGenerator) GenerateQueryTagPairs(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
+func (g *DiagonalGenerator) GenerateQueryTagPairSets(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
 	fpGen := FullPermutationGen{}
-	return fpGen.GenerateQueryTagPairs(tagKeyNum, tagValueNum)
+	return fpGen.GenerateQueryTagPairSets(tagKeyNum, tagValueNum)
 }
 
-// GetManyTagPairs: return many tag pair sets.
+// GetDiagonalTagPairSetss: return many tag pair sets.
 // For example, tagKeyNum = 2, tagValueNum = 5, then return
 // [[{a 0} {b 0}] [{a 1} {b 1}] [{a 2} {b 2}] [{a 3} {b 3}] [{a 4} {b 4}]].
 // Another example, tagKeyNum = 2, tagValueNum = 5, then return
 // [[{a 0} {b 0} {c 0}] [{a 1} {b 1} {c 1}]]
-func GetManyTagPairs(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
-	manyTagPairs := [][]tsi2.TagPair{}
+func GetDiagonalTagPairSetss(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
+	tagPairSets := [][]tsi2.TagPair{}
 	for i := 0; i < tagValueNum; i++ {
-		tagPairs := []tsi2.TagPair{}
+		tagPairSet := []tsi2.TagPair{}
 		for j := 0; j < tagKeyNum; j++ {
-			tagPairs = append(tagPairs, tsi2.TagPair{
+			tagPairSet = append(tagPairSet, tsi2.TagPair{
 				TagKey:   fmt.Sprintf("%c", 'a'+j),
 				TagValue: fmt.Sprintf("%d", i),
 			})
 		}
-		manyTagPairs = append(manyTagPairs, tagPairs)
+		tagPairSets = append(tagPairSets, tagPairSet)
 	}
-	return manyTagPairs
+	return tagPairSets
 }

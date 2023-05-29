@@ -2,7 +2,7 @@ package tsi2
 
 type Optimizer interface {
 	// To Generate a new grid with information of GridIndex
-	NewOptimizedGridWithInfo(*GridIndex, []TagPair) *Grid
+	NewOptimizedGrid(*GridIndex, []TagPair) *Grid
 }
 
 // If in the previous grids, the tag key `K` is filled up n times,
@@ -24,21 +24,21 @@ func NewMultiplierOptimizer(basicNum, multiplier int) *MultiplierOptimizer {
 	}
 }
 
-func (a *MultiplierOptimizer) NewOptimizedGridWithInfo(gi *GridIndex, tagPairs []TagPair) *Grid {
+func (a *MultiplierOptimizer) NewOptimizedGrid(gi *GridIndex, tagPairSet []TagPair) *Grid {
 	offset := int64(0)
 	if len(gi.grids) != 0 {
 		lastGrid := gi.grids[len(gi.grids)-1]
-		lastGridLength := lastGrid.CalLength()
+		lastGridLength := lastGrid.getCapacityOfIDs()
 		offset = lastGrid.offset + int64(lastGridLength)
 	}
 
-	tagValuess := make([]*TagValues, 0, len(tagPairs))
-	for i := 0; i < len(tagPairs); i++ {
-		n := gi.GetNumOfFilledUpGridForSingleTagKey(tagPairs[i].TagKey)
+	tagValuess := make([]*TagValues, 0, len(tagPairSet))
+	for i := 0; i < len(tagPairSet); i++ {
+		n := gi.GetNumOfFilledUpGridForSingleTagKey(tagPairSet[i].TagKey)
 		tagValuess = append(tagValuess, newTagValues(PowInt(a.multiplier, n)*a.basicNum))
-		tagValuess[i].SetValue(tagPairs[i].TagValue)
+		tagValuess[i].SetValue(tagPairSet[i].TagValue)
 	}
 
-	grid := newGrid(offset, tagPairs, tagValuess)
+	grid := initGrid(offset, tagPairSet, tagValuess)
 	return grid
 }

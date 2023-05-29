@@ -16,13 +16,13 @@ var (
 var g FullPermutationGen
 
 func TestGenerateQuery(t *testing.T) {
-	queries := g.GenerateQueryTagPairs(tagKeyNum, tagValueNum)
+	queries := g.GenerateQueryTagPairSets(tagKeyNum, tagValueNum)
 	assert.Equal(t, tsi2.PowInt((tagValueNum+1), tagKeyNum)-1, len(queries))
 	// fmt.Printf("%v\n", queries)
 }
 
 func TestGenerateInserts(t *testing.T) {
-	inserts := g.GenerateInsertTagPairs(tagKeyNum, tagValueNum)
+	inserts := g.GenerateInsertTagPairSets(tagKeyNum, tagValueNum)
 	assert.Equal(t, tsi2.PowInt(tagValueNum, tagKeyNum), len(inserts))
 	// fmt.Printf("%v\n", inserts)
 }
