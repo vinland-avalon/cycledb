@@ -117,8 +117,9 @@ func TestMultiGridWithMultiplier(t *testing.T) {
 }
 
 func TestMultiGridWithMultiplier2(t *testing.T) {
+	gen := generators[DiagonalGen]
 	gi := tsi2.NewGridIndex(tsi2.NewMultiplierOptimizer(2, 2))
-	tagPairSets := gen.GenerateInsertTagPairSets(4, 10)
+	tagPairSets := gen.GenerateInsertTagPairSets(10, 20)
 	ids := make([]int64, 0, len(tagPairSets))
 
 	for _, tagPairSet := range tagPairSets {
@@ -128,6 +129,6 @@ func TestMultiGridWithMultiplier2(t *testing.T) {
 
 	for i, tagPairSet := range tagPairSets {
 		id := gi.GetSeriesIDsWithTagPairSet(tagPairSet)
-		assert.True(t, Contains(id, []int64{ids[i]}))
+		assert.True(t, Contains([]int64{id[0]}, []int64{ids[i]}))
 	}
 }

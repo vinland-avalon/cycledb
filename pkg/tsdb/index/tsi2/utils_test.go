@@ -1,7 +1,9 @@
 package tsi2_test
 
 import (
+	"math/rand"
 	"testing"
+	"time"
 
 	"cycledb/pkg/tsdb/index/tsi2"
 
@@ -38,4 +40,13 @@ func Contains(a, b []int64) bool {
 		}
 	}
 	return true
+}
+
+func randomSelectTagPairSets(tagPairSets [][]tsi2.TagPair, queryNum int) [][]tsi2.TagPair {
+	selectedSets := [][]tsi2.TagPair{}
+	for i := 0; i < queryNum; i++ {
+		rand.Seed(time.Now().UnixNano())
+		selectedSets = append(selectedSets, tagPairSets[rand.Intn(len(tagPairSets))])
+	}
+	return selectedSets
 }

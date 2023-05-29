@@ -24,3 +24,20 @@ func TestInvertIndex(t *testing.T) {
 		assert.True(t, Contains(realIds, []int64{int64(i)}))
 	}
 }
+
+func TestLargeScaleInvertIndex(t *testing.T) {
+	gen := generators[DiagonalGen]
+	index := tsi2.NewInvertIndex()
+	tagPairSets := gen.GenerateInsertTagPairSets(10, 20)
+	ids := make([]int64, 0, len(tagPairSets))
+
+	for _, tagPairSet := range tagPairSets {
+		_, id := index.InitNewSeriesID(tagPairSet)
+		ids = append(ids, id)
+	}
+
+	for i, tagPairSet := range tagPairSets {
+		id := index.GetSeriesIDsWithTagPairs(tagPairSet)
+		assert.True(t, Contains(id, []int64{ids[i]}))
+	}
+}

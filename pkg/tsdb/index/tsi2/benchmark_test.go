@@ -22,6 +22,7 @@ const (
 	FPGen       = "full_permutation_generator"
 	DiagonalGen = "diagonal_generator"
 	RandomGen   = "random_generator"
+	queryNum    = 30
 )
 
 func init() {
@@ -63,8 +64,8 @@ func BenchmarkInvertIndexQuery(b *testing.B) {
 	for _, tagPairSet := range tagPairSets {
 		index.InitNewSeriesID(tagPairSet)
 	}
-	queryTagPairSets := gen.GenerateQueryTagPairSets(tagKeyNum, tagValueNum)
-	// fmt.Printf("%+v\n", manyQueryTagPairs)
+
+	queryTagPairSets := randomSelectTagPairSets(tagPairSets, queryNum)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -95,11 +96,12 @@ func BenchmarkGridIndexQuery(b *testing.B) {
 	for _, tagPairSet := range tagPairSets {
 		gi.SetTagPairSet(tagPairSet)
 	}
-	queryTagPairPairSets := gen.GenerateQueryTagPairSets(tagKeyNum, tagValueNum)
+
+	queryTagPairSets := randomSelectTagPairSets(tagPairSets, queryNum)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		for _, query := range queryTagPairPairSets {
+		for _, query := range queryTagPairSets {
 			gi.GetSeriesIDsWithTagPairSet(query)
 		}
 	}
