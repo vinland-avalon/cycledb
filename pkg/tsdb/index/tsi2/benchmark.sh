@@ -2,9 +2,10 @@
  
 TAG_VALUE_NUM=4
 TAG_KEY_NUM=3
+
 # SERIES_KEY_GENERATOR="full_permutation_generator"
-# SERIES_KEY_GENERATOR="diagonal_generator"
-SERIES_KEY_GENERATOR="random_generator"
+SERIES_KEY_GENERATOR="diagonal_generator"
+# SERIES_KEY_GENERATOR="random_generator"
 
 # to test how tag_value_num will affect porformance
 # [4,11)

@@ -33,37 +33,37 @@ func GetTagPairsExample(suffix string) []tsi2.TagPair {
 func TestInitAndGetSeriesID(t *testing.T) {
 	gi := tsi2.NewGridIndex(tsi2.NewMultiplierOptimizer(10, 1))
 	// first series
-	id := gi.InitNewSeriesID(GetTagPairsExample("0"))
+	id := gi.SetTagPairSet(GetTagPairsExample("0"))
 	assert.Equal(t, id, int64(0))
 	// insert the same series twice, should return false and 0
-	id = gi.InitNewSeriesID(GetTagPairsExample("0"))
+	id = gi.SetTagPairSet(GetTagPairsExample("0"))
 
 	assert.Equal(t, id, int64(0))
 	// insert the second series
-	id = gi.InitNewSeriesID(GetTagPairsExample("1"))
+	id = gi.SetTagPairSet(GetTagPairsExample("1"))
 	assert.Equal(t, id, int64(1111))
 	// insert the same series twice, should return false and 1111
-	id = gi.InitNewSeriesID(GetTagPairsExample("1"))
+	id = gi.SetTagPairSet(GetTagPairsExample("1"))
 
 	assert.Equal(t, id, int64(1111))
 
 	// get ids of tag pairs (specific)
-	ids := gi.GetSeriesIDsWithTagPairs(GetTagPairsExample("0"))
+	ids := gi.GetSeriesIDsWithTagPairSet(GetTagPairsExample("0"))
 	assert.Equal(t, ids, []int64{int64(0)})
-	ids = gi.GetSeriesIDsWithTagPairs(GetTagPairsExample("1"))
+	ids = gi.GetSeriesIDsWithTagPairSet(GetTagPairsExample("1"))
 	assert.Equal(t, ids, []int64{int64(1111)})
-	ids = gi.GetSeriesIDsWithTagPairs(GetTagPairsExample("2"))
+	ids = gi.GetSeriesIDsWithTagPairSet(GetTagPairsExample("2"))
 	assert.Equal(t, ids, []int64{})
 
 	// get ids of tag pairs (multiple ids)
-	tagPairs := GetTagPairsExample("2")
+	tagPairSet := GetTagPairsExample("2")
 	// incoming tagpairs: [a, 02][b, 12][c, 21][d, 32]
 	// similar to previous one: [a, 01][b, 11][c, 21][d, 31] for c
-	tagPairs[2].TagValue = "21"
-	id = gi.InitNewSeriesID(tagPairs)
+	tagPairSet[2].TagValue = "21"
+	id = gi.SetTagPairSet(tagPairSet)
 	assert.Equal(t, id, int64(2212))
 	// when looking up with {c, 21}, should return multiple ids
-	ids = gi.GetSeriesIDsWithTagPairs([]tsi2.TagPair{
+	ids = gi.GetSeriesIDsWithTagPairSet([]tsi2.TagPair{
 		{
 			TagKey:   "c",
 			TagValue: "21",
@@ -72,34 +72,20 @@ func TestInitAndGetSeriesID(t *testing.T) {
 	assert.Equal(t, Contains(ids, []int64{int64(2212), int64(1111)}), true)
 }
 
-func Contains(a, b []int64) bool {
-	m := map[int64]struct{}{}
-	for _, v := range a {
-		m[v] = struct{}{}
-	}
-	for _, v := range b {
-		if _, ok := m[v]; !ok {
-			return false
-		}
-	}
-	return true
-}
-
 func TestMultiGrid(t *testing.T) {
 	// local variable to overlap `gen` in tsi2_test package
 	gen := generators[DiagonalGen]
 	gi := tsi2.NewGridIndex(tsi2.NewMultiplierOptimizer(2, 1))
-	manyTagPairs := gen.GenerateInsertTagPairs(2, 5)
-	manyTagPairs2 := gen.GenerateInsertTagPairs(3, 2)
-	manyTagPairs = append(manyTagPairs, manyTagPairs2...)
+	tagPairSets := gen.GenerateInsertTagPairSets(2, 5)
+	tagPairSets = append(tagPairSets, gen.GenerateInsertTagPairSets(3, 2)...)
 	wanted := []int64{0, 3, 4, 7, 8, 12, 19}
-	for i, tagPairs := range manyTagPairs {
-		id := gi.InitNewSeriesID(tagPairs)
+	for i, tagPairSet := range tagPairSets {
+		id := gi.SetTagPairSet(tagPairSet)
 		assert.Equal(t, wanted[i], id)
 	}
 
-	for i, tagPairs := range manyTagPairs {
-		ids := gi.GetSeriesIDsWithTagPairs(tagPairs)
+	for i, tagPairs := range tagPairSets {
+		ids := gi.GetSeriesIDsWithTagPairSet(tagPairs)
 		assert.True(t, Contains(ids, []int64{wanted[i]}))
 	}
 }
@@ -108,9 +94,8 @@ func TestMultiGridWithMultiplier(t *testing.T) {
 	// local variable to overlap `gen` in tsi2_test package
 	gen := generators[DiagonalGen]
 	gi := tsi2.NewGridIndex(tsi2.NewMultiplierOptimizer(2, 2))
-	manyTagPairs := gen.GenerateInsertTagPairs(2, 5)
-	manyTagPairs2 := gen.GenerateInsertTagPairs(3, 2)
-	manyTagPairs = append(manyTagPairs, manyTagPairs2...)
+	tagPairSets := gen.GenerateInsertTagPairSets(2, 5)
+	tagPairSets = append(tagPairSets, gen.GenerateInsertTagPairSets(3, 2)...)
 	// tagKeyNum = 2, tagValueNum = 5
 	// [[{a 0} {b 0}] [{a 1} {b 1}]     [{a 2} {b 2}] [{a 3} {b 3}] [{a 4} {b 4}]].
 	//            2 * 2									4 * 4
@@ -120,29 +105,29 @@ func TestMultiGridWithMultiplier(t *testing.T) {
 	// 					4 * 4 * 2
 	//           20		            31
 	wanted := []int64{0, 3, 4, 9, 14, 20, 31}
-	for i, tagPairs := range manyTagPairs {
-		id := gi.InitNewSeriesID(tagPairs)
+	for i, tagPairSet := range tagPairSets {
+		id := gi.SetTagPairSet(tagPairSet)
 		assert.Equal(t, wanted[i], id)
 	}
 
-	for i, tagPairs := range manyTagPairs {
-		ids := gi.GetSeriesIDsWithTagPairs(tagPairs)
+	for i, tagPairSet := range tagPairSets {
+		ids := gi.GetSeriesIDsWithTagPairSet(tagPairSet)
 		assert.True(t, Contains(ids, []int64{wanted[i]}))
 	}
 }
 
 func TestMultiGridWithMultiplier2(t *testing.T) {
 	gi := tsi2.NewGridIndex(tsi2.NewMultiplierOptimizer(2, 2))
-	manyTagPairs := gen.GenerateInsertTagPairs(4, 10)
-	ids := make([]int64, 0, len(manyTagPairs))
+	tagPairSets := gen.GenerateInsertTagPairSets(4, 10)
+	ids := make([]int64, 0, len(tagPairSets))
 
-	for _, tagPairs := range manyTagPairs {
-		id := gi.InitNewSeriesID(tagPairs)
+	for _, tagPairSet := range tagPairSets {
+		id := gi.SetTagPairSet(tagPairSet)
 		ids = append(ids, id)
 	}
 
-	for i, tagPairs := range manyTagPairs {
-		id := gi.GetSeriesIDsWithTagPairs(tagPairs)
+	for i, tagPairSet := range tagPairSets {
+		id := gi.GetSeriesIDsWithTagPairSet(tagPairSet)
 		assert.True(t, Contains(id, []int64{ids[i]}))
 	}
 }

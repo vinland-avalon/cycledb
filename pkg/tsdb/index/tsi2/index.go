@@ -21,19 +21,19 @@ func (gi *GridIndex) WithAnalyzer(analyzer *MultiplierOptimizer) {
 	gi.optimizer = analyzer
 }
 
-// GetSeriesIDsWithTagPairs: TODO(vinland-avalon): will return some fake ids
-func (gi *GridIndex) GetSeriesIDsWithTagPairs(tagPairs []TagPair) []int64 {
+// GetSeriesIDsWithTagPairSet: TODO(vinland-avalon): will return some fake ids
+func (gi *GridIndex) GetSeriesIDsWithTagPairSet(tagPairSet []TagPair) []int64 {
 	ids := []int64{}
 	for _, grid := range gi.grids {
-		ids = append(ids, grid.GetSeriesIDsWithTagPairs(tagPairs)...)
+		ids = append(ids, grid.GetSeriesIDsWithTagPairSet(tagPairSet)...)
 	}
 	return ids
 }
 
 // return -1 if not exist
-func (gi *GridIndex) getStrictlyMatchedSeriesIDForTagPairs(tagPairs []TagPair) int64 {
+func (gi *GridIndex) getStrictlyMatchedSeriesIDForTagPairSet(tagPairSet []TagPair) int64 {
 	for _, grid := range gi.grids {
-		id := grid.GetStrictlyMatchedIDForTagPairs(tagPairs)
+		id := grid.GetStrictlyMatchedIDForTagPairSet(tagPairSet)
 		if id != -1 {
 			return id
 		}
@@ -41,28 +41,28 @@ func (gi *GridIndex) getStrictlyMatchedSeriesIDForTagPairs(tagPairs []TagPair) i
 	return int64(-1)
 }
 
-// SetSeriesID: return corresponding id
-func (gi *GridIndex) InitNewSeriesID(tagPairs []TagPair) int64 {
+// SetTagPairSet: (insert series keys, then) return corresponding id
+func (gi *GridIndex) SetTagPairSet(tagPairSet []TagPair) int64 {
 	// if already exist
-	id := gi.getStrictlyMatchedSeriesIDForTagPairs(tagPairs)
+	id := gi.getStrictlyMatchedSeriesIDForTagPairSet(tagPairSet)
 	if id != -1 {
 		return id
 	}
 
 	// if it can be represented in existed grids
 	for _, grid := range gi.grids {
-		if ok, id := grid.InsertTagPairs(tagPairs); ok {
+		if ok, id := grid.SetTagPairSet(tagPairSet); ok {
 			return id
 		}
 	}
 
 	// else create a new grid
-	id = gi.newGridAndSeriesIDWithTagPairs(tagPairs)
+	id = gi.initGridAndSetTagPairSet(tagPairSet)
 	return id
 }
 
-func (gi *GridIndex) newGridAndSeriesIDWithTagPairs(tagPairs []TagPair) int64 {
-	grid := gi.optimizer.NewOptimizedGridWithInfo(gi, tagPairs)
+func (gi *GridIndex) initGridAndSetTagPairSet(tagPairSet []TagPair) int64 {
+	grid := gi.optimizer.NewOptimizedGrid(gi, tagPairSet)
 	gi.grids = append(gi.grids, grid)
 
 	return grid.offset
@@ -71,7 +71,7 @@ func (gi *GridIndex) newGridAndSeriesIDWithTagPairs(tagPairs []TagPair) int64 {
 func (gi *GridIndex) GetNumOfFilledUpGridForSingleTagKey(tagKey string) int {
 	cnt := 0
 	for _, g := range gi.grids {
-		if g.IfTagKeyExistAndFilledUp(tagKey) {
+		if g.tagKeyExistsAndFilledUp(tagKey) {
 			cnt++
 		}
 	}
