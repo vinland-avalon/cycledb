@@ -30,8 +30,6 @@ func (gi *GridIndex) GetSeriesIDsWithTagPairSet(tagPairSet []TagPair) []int64 {
 	gi.mu.RLock()
 	defer gi.mu.RUnlock()
 	for _, grid := range gi.grids {
-		// Since Grid Index does not have function to delete, the series are append-only.
-		// So, for loose consistency, we can iterate each grid seperately.
 		idsForGrid := grid.GetSeriesIDsWithTagPairSet(tagPairSet)
 		ids = append(ids, idsForGrid...)
 	}

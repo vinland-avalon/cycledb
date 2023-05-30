@@ -122,7 +122,11 @@ func TestIfThreadSafeForGridIndex(t *testing.T) {
 		for i, tagPairSet := range tagPairSets {
 			if i%mod == 0 {
 				id := index.SetTagPairSet(tagPairSet)
-				wantedIds.Store(i, id)
+				if existedId, ok := wantedIds.Load(i); ok {
+					assert.Equal(t, existedId.(int64), id)
+				} else {
+					wantedIds.Store(i, id)
+				}
 			}
 		}
 	}
