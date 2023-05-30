@@ -8,28 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func GetTagPairsExample(suffix string) []tsi2.TagPair {
-	tagPairs := []tsi2.TagPair{
-		{
-			TagKey:   "a",
-			TagValue: "0" + suffix,
-		},
-		{
-			TagKey:   "b",
-			TagValue: "1" + suffix,
-		},
-		{
-			TagKey:   "c",
-			TagValue: "2" + suffix,
-		},
-		{
-			TagKey:   "d",
-			TagValue: "3" + suffix,
-		},
-	}
-	return tagPairs
-}
-
 func TestInitAndGetSeriesID(t *testing.T) {
 	gi := tsi2.NewGridIndex(tsi2.NewMultiplierOptimizer(10, 1))
 	// first series

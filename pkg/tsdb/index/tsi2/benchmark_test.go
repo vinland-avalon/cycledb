@@ -1,45 +1,10 @@
 package tsi2_test
 
 import (
-	"flag"
-	"fmt"
 	"testing"
 
 	"cycledb/pkg/tsdb/index/tsi2"
-	generator "cycledb/pkg/tsdb/index/tsi2/tag_pairs_generator"
 )
-
-var (
-	tagKeyNum   int = 3
-	tagValueNum int = 4
-	// generators
-	generators map[string]generator.Generator
-	genID      string = FPGen
-	gen        generator.Generator
-)
-
-const (
-	FPGen       = "full_permutation_generator"
-	DiagonalGen = "diagonal_generator"
-	RandomGen   = "random_generator"
-	queryNum    = 30
-)
-
-func init() {
-	flag.IntVar(&tagKeyNum, "tagKeyNum", 3, "number of tag key")
-	flag.IntVar(&tagValueNum, "tagValueNum", 4, "number of tag value for each tag Key")
-	flag.StringVar(&genID, "seriesKeyGenerator", FPGen, "generator for tag pairs for benchmark, including full_permutation_generator, diagonal_generator and random_generator")
-	testing.Init()
-	flag.Parse()
-	fmt.Printf("*************** tagKeyNum = %d, tagValueNum = %d, seriesKeyGenerator = %s *******************\n", tagKeyNum, tagValueNum, genID)
-
-	// register generators
-	generators = map[string]generator.Generator{}
-	generators[FPGen] = &generator.FullPermutationGen{}
-	generators[DiagonalGen] = &generator.DiagonalGenerator{}
-	generators[RandomGen] = &generator.RandomGenerator{}
-	gen = generators[genID]
-}
 
 // 3,4	BenchmarkInvertIndex-16    	   16528	     74486 ns/op	   29747 B/op	     338 allocs/op
 // 3,10	BenchmarkInvertIndex-16    	     138	   8737311 ns/op	 5415280 B/op	   28821 allocs/op
