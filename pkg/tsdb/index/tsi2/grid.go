@@ -65,34 +65,25 @@ func (g *Grid) GetStrictlyMatchedIDForTagPairSet(tagPairSet []TagPair) int64 {
 }
 
 // SetTagPairSet: return whether the insert succeed and the corresponding id.
-// If fails, return false, -1.
+// If fails, return -1.
 // Only when tags matches and all have free slot, the insert succeeds.
-func (g *Grid) SetTagPairSet(tagPairSet []TagPair) (bool, int64) {
+func (g *Grid) SetTagPairSet(tagPairSet []TagPair) int64 {
+	if !g.ableToSetTagPairSet(tagPairSet) {
+		return -1
+	}
 	// get the tag pairs already exists, which means they don't need to be inserted
 	existedTagPairIndex := map[int]struct{}{}
-
-	// check each tag key matches and have free slot
-	// the tag key does not match
-	if len(tagPairSet) != g.getGridSize() {
-		return false, -1
-	}
 	for i, tagPair := range tagPairSet {
 		index, ok := g.tagKeyToIndex[tagPair.TagKey]
 		// the tag key does not match
 		if !ok {
-			return false, -1
+			return -1
 		}
 
 		// if value already exist, no need to insert
 		tagValues := g.tagValuess[index]
 		if tagValues.GetValueIndex(tagPair.TagValue) != -1 {
 			existedTagPairIndex[i] = struct{}{}
-			continue
-		}
-
-		// no free slot
-		if g.tagKeyExistsAndFilledUp(tagPair.TagKey) {
-			return false, -1
 		}
 	}
 
@@ -107,7 +98,35 @@ func (g *Grid) SetTagPairSet(tagPairSet []TagPair) (bool, int64) {
 	}
 
 	// calculate id
-	return true, g.GetStrictlyMatchedIDForTagPairSet(tagPairSet)
+	return g.GetStrictlyMatchedIDForTagPairSet(tagPairSet)
+}
+
+// TODO(vinland-avalon): also need to judge if whole tag pairs already exist
+func (g *Grid) ableToSetTagPairSet(tagPairSet []TagPair) bool {
+	// check each tag key matches and have free slot
+	// the tag key does not match
+	if len(tagPairSet) != g.getGridSize() {
+		return false
+	}
+	for _, tagPair := range tagPairSet {
+		index, ok := g.tagKeyToIndex[tagPair.TagKey]
+		// the tag key does not match
+		if !ok {
+			return false
+		}
+
+		// if value already exist, no need to insert
+		tagValues := g.tagValuess[index]
+		if tagValues.GetValueIndex(tagPair.TagValue) != -1 {
+			continue
+		}
+
+		// no free slot
+		if g.tagKeyExistsAndFilledUp(tagPair.TagKey) {
+			return false
+		}
+	}
+	return true
 }
 
 func (g *Grid) tagKeyExistsAndFilledUp(tagKey string) bool {

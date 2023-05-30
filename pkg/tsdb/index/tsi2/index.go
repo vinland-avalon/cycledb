@@ -1,5 +1,7 @@
 package tsi2
 
+import "sync"
+
 type TagPair struct {
 	TagKey   string
 	TagValue string
@@ -8,6 +10,7 @@ type TagPair struct {
 type GridIndex struct {
 	grids     []*Grid
 	optimizer Optimizer
+	mu        sync.RWMutex
 }
 
 func NewGridIndex(optimizer *MultiplierOptimizer) *GridIndex {
@@ -24,8 +27,13 @@ func (gi *GridIndex) WithAnalyzer(analyzer *MultiplierOptimizer) {
 // GetSeriesIDsWithTagPairSet: TODO(vinland-avalon): will return some fake ids
 func (gi *GridIndex) GetSeriesIDsWithTagPairSet(tagPairSet []TagPair) []int64 {
 	ids := []int64{}
+	gi.mu.RLock()
+	defer gi.mu.RUnlock()
 	for _, grid := range gi.grids {
-		ids = append(ids, grid.GetSeriesIDsWithTagPairSet(tagPairSet)...)
+		// Since Grid Index does not have function to delete, the series are append-only.
+		// So, for loose consistency, we can iterate each grid seperately.
+		idsForGrid := grid.GetSeriesIDsWithTagPairSet(tagPairSet)
+		ids = append(ids, idsForGrid...)
 	}
 	return ids
 }
@@ -43,15 +51,26 @@ func (gi *GridIndex) getStrictlyMatchedSeriesIDForTagPairSet(tagPairSet []TagPai
 
 // SetTagPairSet: (insert series keys, then) return corresponding id
 func (gi *GridIndex) SetTagPairSet(tagPairSet []TagPair) int64 {
-	// if already exist
+	// 1. if tag pair sets already exist
+	gi.mu.RLock()
 	id := gi.getStrictlyMatchedSeriesIDForTagPairSet(tagPairSet)
+	if id != -1 {
+		gi.mu.RUnlock()
+		return id
+	}
+	gi.mu.RUnlock()
+
+	// 2. try to do insert within existed grids
+	// double check
+	gi.mu.Lock()
+	defer gi.mu.Unlock()
+	id = gi.getStrictlyMatchedSeriesIDForTagPairSet(tagPairSet)
 	if id != -1 {
 		return id
 	}
 
-	// if it can be represented in existed grids
 	for _, grid := range gi.grids {
-		if ok, id := grid.SetTagPairSet(tagPairSet); ok {
+		if id := grid.SetTagPairSet(tagPairSet); id != -1 {
 			return id
 		}
 	}
