@@ -15,7 +15,7 @@ func BenchmarkInvertIndexInsert(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		index := tsi2.NewInvertIndex()
 		for _, tagPairSet := range tagPairSets {
-			index.InitNewSeriesID(tagPairSet)
+			index.SetTagPairSet(tagPairSet)
 		}
 	}
 }
@@ -27,7 +27,7 @@ func BenchmarkInvertIndexQuery(b *testing.B) {
 
 	index := tsi2.NewInvertIndex()
 	for _, tagPairSet := range tagPairSets {
-		index.InitNewSeriesID(tagPairSet)
+		index.SetTagPairSet(tagPairSet)
 	}
 
 	queryTagPairSets := randomSelectTagPairSets(tagPairSets, queryNum)
@@ -35,7 +35,7 @@ func BenchmarkInvertIndexQuery(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for _, query := range queryTagPairSets {
-			index.GetSeriesIDsWithTagPairs(query)
+			index.GetSeriesIDsWithTagPairSet(query)
 		}
 	}
 }
