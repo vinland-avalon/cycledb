@@ -1,4 +1,6 @@
-# How to run main.go:
+# Purpose
+So far, this repo is create to build [Grid Index](./pkg/tsdb/index/tsi2/Grid_Index.md). Reach docs [here](./pkg/tsdb/index/tsi2/Grid_Index.md).
+<!-- # How to run main.go:
 remember go version >= 1.18
 so use `gvm`
 ```sh
@@ -16,7 +18,7 @@ Then flux
 ```sh
 go get github.com/influxdata/pkg-config
 ```
-to build and run the program, follow [guide](https://github.com/influxdata/influxdb/blob/master/CONTRIBUTING.md#building-from-source)
+to build and run the program, follow [guide](https://github.com/influxdata/influxdb/blob/master/CONTRIBUTING.md#building-from-source) -->
 
 # [Basic Concepts](https://docs.influxdata.com/influxdb/v1.8/concepts/storage_engine/#the-influxdb-storage-engine-and-the-time-structured-merge-tree-tsm)
 ## Shard
