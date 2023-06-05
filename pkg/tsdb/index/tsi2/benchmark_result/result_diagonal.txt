@@ -4,105 +4,105 @@ goos: linux
 goarch: amd64
 pkg: cycledb/pkg/tsdb/index/tsi2
 cpu: 12th Gen Intel(R) Core(TM) i5-12500H
-BenchmarkInvertIndexInsert-16             103509             10923 ns/op            9781 B/op        115 allocs/op
-BenchmarkInvertIndexQuery-16               92281             12476 ns/op            1680 B/op         90 allocs/op
-BenchmarkGridIndexInsert-16               101972             10825 ns/op            9376 B/op        163 allocs/op
-BenchmarkGridIndexQuery-16                102259             11589 ns/op            6720 B/op        240 allocs/op
+BenchmarkInvertIndexInsert-16              83398             13209 ns/op           11004 B/op        121 allocs/op
+BenchmarkInvertIndexQuery-16               89498             13069 ns/op            1680 B/op         90 allocs/op
+BenchmarkGridIndexInsert-16                98053             11811 ns/op            9392 B/op        163 allocs/op
+BenchmarkGridIndexQuery-16                 96314             11698 ns/op            6720 B/op        240 allocs/op
 PASS
-ok      cycledb/pkg/tsdb/index/tsi2     5.076s
+ok      cycledb/pkg/tsdb/index/tsi2     5.113s
 go test -bench=. -run=none -benchmem -args -tagKeyNum=5 -tagValueNum=20 -seriesKeyGenerator=diagonal_generator
 *************** tagKeyNum = 5, tagValueNum = 20, seriesKeyGenerator = diagonal_generator *******************
 goos: linux
 goarch: amd64
 pkg: cycledb/pkg/tsdb/index/tsi2
 cpu: 12th Gen Intel(R) Core(TM) i5-12500H
-BenchmarkInvertIndexInsert-16              46155             27184 ns/op           21085 B/op        222 allocs/op
-BenchmarkInvertIndexQuery-16               85387             13201 ns/op            1680 B/op         90 allocs/op
-BenchmarkGridIndexInsert-16                53557             23466 ns/op           15288 B/op        274 allocs/op
-BenchmarkGridIndexQuery-16                 84906             13690 ns/op            6720 B/op        240 allocs/op
+BenchmarkInvertIndexInsert-16              37045             31724 ns/op           23579 B/op        229 allocs/op
+BenchmarkInvertIndexQuery-16               86113             13625 ns/op            1680 B/op         90 allocs/op
+BenchmarkGridIndexInsert-16                48805             24658 ns/op           15304 B/op        274 allocs/op
+BenchmarkGridIndexQuery-16                 78147             14044 ns/op            6720 B/op        240 allocs/op
 PASS
-ok      cycledb/pkg/tsdb/index/tsi2     5.598s
+ok      cycledb/pkg/tsdb/index/tsi2     5.551s
 go test -bench=. -run=none -benchmem -args -tagKeyNum=5 -tagValueNum=30 -seriesKeyGenerator=diagonal_generator
 *************** tagKeyNum = 5, tagValueNum = 30, seriesKeyGenerator = diagonal_generator *******************
 goos: linux
 goarch: amd64
 pkg: cycledb/pkg/tsdb/index/tsi2
 cpu: 12th Gen Intel(R) Core(TM) i5-12500H
-BenchmarkInvertIndexInsert-16              27102             43340 ns/op           37107 B/op        330 allocs/op
-BenchmarkInvertIndexQuery-16               86468             13141 ns/op            1680 B/op         90 allocs/op
-BenchmarkGridIndexInsert-16                31346             38325 ns/op           25597 B/op        360 allocs/op
-BenchmarkGridIndexQuery-16                 86556             13296 ns/op            6720 B/op        240 allocs/op
+BenchmarkInvertIndexInsert-16              20280             56136 ns/op           42082 B/op        339 allocs/op
+BenchmarkInvertIndexQuery-16               86589             14103 ns/op            1680 B/op         90 allocs/op
+BenchmarkGridIndexInsert-16                26083             46082 ns/op           25614 B/op        360 allocs/op
+BenchmarkGridIndexQuery-16                 86002             14758 ns/op            6720 B/op        240 allocs/op
 PASS
-ok      cycledb/pkg/tsdb/index/tsi2     5.809s
+ok      cycledb/pkg/tsdb/index/tsi2     6.202s
 go test -bench=. -run=none -benchmem -args -tagKeyNum=5 -tagValueNum=40 -seriesKeyGenerator=diagonal_generator
 *************** tagKeyNum = 5, tagValueNum = 40, seriesKeyGenerator = diagonal_generator *******************
 goos: linux
 goarch: amd64
 pkg: cycledb/pkg/tsdb/index/tsi2
 cpu: 12th Gen Intel(R) Core(TM) i5-12500H
-BenchmarkInvertIndexInsert-16              20838             55930 ns/op           43886 B/op        432 allocs/op
-BenchmarkInvertIndexQuery-16               86293             13601 ns/op            1680 B/op         90 allocs/op
-BenchmarkGridIndexInsert-16                22238             52603 ns/op           34314 B/op        477 allocs/op
-BenchmarkGridIndexQuery-16                 86653             13810 ns/op            6720 B/op        240 allocs/op
+BenchmarkInvertIndexInsert-16              14109             73184 ns/op           48971 B/op        441 allocs/op
+BenchmarkInvertIndexQuery-16               84024             14296 ns/op            1680 B/op         90 allocs/op
+BenchmarkGridIndexInsert-16                18094             66807 ns/op           34330 B/op        477 allocs/op
+BenchmarkGridIndexQuery-16                 82776             14897 ns/op            6720 B/op        240 allocs/op
 PASS
-ok      cycledb/pkg/tsdb/index/tsi2     6.142s
+ok      cycledb/pkg/tsdb/index/tsi2     6.518s
 go test -bench=. -run=none -benchmem -args -tagKeyNum=5 -tagValueNum=50 -seriesKeyGenerator=diagonal_generator
 *************** tagKeyNum = 5, tagValueNum = 50, seriesKeyGenerator = diagonal_generator *******************
 goos: linux
 goarch: amd64
 pkg: cycledb/pkg/tsdb/index/tsi2
 cpu: 12th Gen Intel(R) Core(TM) i5-12500H
-BenchmarkInvertIndexInsert-16              16477             69730 ns/op           51212 B/op        536 allocs/op
-BenchmarkInvertIndexQuery-16               83949             14039 ns/op            1680 B/op         90 allocs/op
-BenchmarkGridIndexInsert-16                16875             71010 ns/op           43944 B/op        559 allocs/op
-BenchmarkGridIndexQuery-16                 83816             13940 ns/op            6720 B/op        240 allocs/op
+BenchmarkInvertIndexInsert-16              13257             95591 ns/op           56546 B/op        546 allocs/op
+BenchmarkInvertIndexQuery-16               79560             14276 ns/op            1680 B/op         90 allocs/op
+BenchmarkGridIndexInsert-16                13644             87610 ns/op           43959 B/op        559 allocs/op
+BenchmarkGridIndexQuery-16                 84415             14074 ns/op            6720 B/op        240 allocs/op
 PASS
-ok      cycledb/pkg/tsdb/index/tsi2     6.473s
+ok      cycledb/pkg/tsdb/index/tsi2     6.910s
 go test -bench=. -run=none -benchmem -args -tagKeyNum=5 -tagValueNum=10 -seriesKeyGenerator=diagonal_generator
 *************** tagKeyNum = 5, tagValueNum = 10, seriesKeyGenerator = diagonal_generator *******************
 goos: linux
 goarch: amd64
 pkg: cycledb/pkg/tsdb/index/tsi2
 cpu: 12th Gen Intel(R) Core(TM) i5-12500H
-BenchmarkInvertIndexInsert-16             105612             10961 ns/op            9782 B/op        115 allocs/op
-BenchmarkInvertIndexQuery-16               85281             12853 ns/op            1680 B/op         90 allocs/op
-BenchmarkGridIndexInsert-16               102763             10540 ns/op            9376 B/op        163 allocs/op
-BenchmarkGridIndexQuery-16                 94702             11972 ns/op            6720 B/op        240 allocs/op
+BenchmarkInvertIndexInsert-16              85635             13800 ns/op           11004 B/op        121 allocs/op
+BenchmarkInvertIndexQuery-16               86514             13922 ns/op            1680 B/op         90 allocs/op
+BenchmarkGridIndexInsert-16                93930             12719 ns/op            9392 B/op        163 allocs/op
+BenchmarkGridIndexQuery-16                 95773             12707 ns/op            6720 B/op        240 allocs/op
 PASS
-ok      cycledb/pkg/tsdb/index/tsi2     4.992s
+ok      cycledb/pkg/tsdb/index/tsi2     5.356s
 go test -bench=. -run=none -benchmem -args -tagKeyNum=8 -tagValueNum=10 -seriesKeyGenerator=diagonal_generator
 *************** tagKeyNum = 8, tagValueNum = 10, seriesKeyGenerator = diagonal_generator *******************
 goos: linux
 goarch: amd64
 pkg: cycledb/pkg/tsdb/index/tsi2
 cpu: 12th Gen Intel(R) Core(TM) i5-12500H
-BenchmarkInvertIndexInsert-16              59096             20055 ns/op           15651 B/op        184 allocs/op
-BenchmarkInvertIndexQuery-16               58678             20058 ns/op            1680 B/op         90 allocs/op
-BenchmarkGridIndexInsert-16                68906             16935 ns/op           13760 B/op        235 allocs/op
-BenchmarkGridIndexQuery-16                 59128             19126 ns/op           10080 B/op        330 allocs/op
+BenchmarkInvertIndexInsert-16              45470             26713 ns/op           16873 B/op        190 allocs/op
+BenchmarkInvertIndexQuery-16               52383             21778 ns/op            1680 B/op         90 allocs/op
+BenchmarkGridIndexInsert-16                56718             20659 ns/op           13776 B/op        235 allocs/op
+BenchmarkGridIndexQuery-16                 59650             20812 ns/op           10080 B/op        330 allocs/op
 PASS
-ok      cycledb/pkg/tsdb/index/tsi2     5.472s
+ok      cycledb/pkg/tsdb/index/tsi2     5.708s
 go test -bench=. -run=none -benchmem -args -tagKeyNum=11 -tagValueNum=10 -seriesKeyGenerator=diagonal_generator
 *************** tagKeyNum = 11, tagValueNum = 10, seriesKeyGenerator = diagonal_generator *******************
 goos: linux
 goarch: amd64
 pkg: cycledb/pkg/tsdb/index/tsi2
 cpu: 12th Gen Intel(R) Core(TM) i5-12500H
-BenchmarkInvertIndexInsert-16              41352             27624 ns/op           21949 B/op        254 allocs/op
-BenchmarkInvertIndexQuery-16               45459             26281 ns/op            1680 B/op         90 allocs/op
-BenchmarkGridIndexInsert-16                48600             24161 ns/op           20473 B/op        313 allocs/op
-BenchmarkGridIndexQuery-16                 55023             20783 ns/op           14400 B/op        420 allocs/op
+BenchmarkInvertIndexInsert-16              34328             35709 ns/op           23173 B/op        260 allocs/op
+BenchmarkInvertIndexQuery-16               41071             31863 ns/op            1680 B/op         90 allocs/op
+BenchmarkGridIndexInsert-16                38040             29840 ns/op           20488 B/op        313 allocs/op
+BenchmarkGridIndexQuery-16                 38364             30018 ns/op           14400 B/op        420 allocs/op
 PASS
-ok      cycledb/pkg/tsdb/index/tsi2     5.706s
+ok      cycledb/pkg/tsdb/index/tsi2     6.125s
 go test -bench=. -run=none -benchmem -args -tagKeyNum=14 -tagValueNum=10 -seriesKeyGenerator=diagonal_generator
 *************** tagKeyNum = 14, tagValueNum = 10, seriesKeyGenerator = diagonal_generator *******************
 goos: linux
 goarch: amd64
 pkg: cycledb/pkg/tsdb/index/tsi2
 cpu: 12th Gen Intel(R) Core(TM) i5-12500H
-BenchmarkInvertIndexInsert-16              34011             35672 ns/op           28759 B/op        324 allocs/op
-BenchmarkInvertIndexQuery-16               36206             32865 ns/op            1680 B/op         90 allocs/op
-BenchmarkGridIndexInsert-16                36171             32165 ns/op           27675 B/op        388 allocs/op
-BenchmarkGridIndexQuery-16                 47946             25489 ns/op           17760 B/op        510 allocs/op
+BenchmarkInvertIndexInsert-16              22491             49969 ns/op           29980 B/op        330 allocs/op
+BenchmarkInvertIndexQuery-16               29551             38819 ns/op            1680 B/op         90 allocs/op
+BenchmarkGridIndexInsert-16                29277             40676 ns/op           27690 B/op        388 allocs/op
+BenchmarkGridIndexQuery-16                 36672             33373 ns/op           17760 B/op        510 allocs/op
 PASS
-ok      cycledb/pkg/tsdb/index/tsi2     6.115s
+ok      cycledb/pkg/tsdb/index/tsi2     6.407s

@@ -1,34 +1,13 @@
 package tsi2_test
 
 import (
+	"sync"
 	"testing"
 
 	"cycledb/pkg/tsdb/index/tsi2"
 
 	"github.com/stretchr/testify/assert"
 )
-
-func GetTagPairsExample(suffix string) []tsi2.TagPair {
-	tagPairs := []tsi2.TagPair{
-		{
-			TagKey:   "a",
-			TagValue: "0" + suffix,
-		},
-		{
-			TagKey:   "b",
-			TagValue: "1" + suffix,
-		},
-		{
-			TagKey:   "c",
-			TagValue: "2" + suffix,
-		},
-		{
-			TagKey:   "d",
-			TagValue: "3" + suffix,
-		},
-	}
-	return tagPairs
-}
 
 func TestInitAndGetSeriesID(t *testing.T) {
 	gi := tsi2.NewGridIndex(tsi2.NewMultiplierOptimizer(10, 1))
@@ -130,5 +109,54 @@ func TestMultiGridWithMultiplier2(t *testing.T) {
 	for i, tagPairSet := range tagPairSets {
 		id := gi.GetSeriesIDsWithTagPairSet(tagPairSet)
 		assert.True(t, Contains([]int64{id[0]}, []int64{ids[i]}))
+	}
+}
+
+func TestIfThreadSafeForGridIndex(t *testing.T) {
+	gen := generators[DiagonalGen]
+	index := tsi2.NewGridIndex(tsi2.NewMultiplierOptimizer(2, 2))
+	tagPairSets := gen.GenerateInsertTagPairSets(10, 20)
+	wantedIds := sync.Map{}
+	queryTagPairSets := randomSelectTagPairSets(tagPairSets, queryNum)
+	insertData := func(mod int) {
+		for i, tagPairSet := range tagPairSets {
+			if i%mod == 0 {
+				id := index.SetTagPairSet(tagPairSet)
+				if existedId, ok := wantedIds.Load(i); ok {
+					assert.Equal(t, existedId.(int64), id)
+				} else {
+					wantedIds.Store(i, id)
+				}
+			}
+		}
+	}
+	queryData := func() {
+		for _, query := range queryTagPairSets {
+			index.GetSeriesIDsWithTagPairSet(query)
+		}
+	}
+	var wg sync.WaitGroup
+	wg.Add(4)
+	go func() {
+		insertData(1)
+		wg.Done()
+	}()
+	go func() {
+		insertData(2)
+		wg.Done()
+	}()
+	go func() {
+		queryData()
+		wg.Done()
+	}()
+	go func() {
+		queryData()
+		wg.Done()
+	}()
+	wg.Wait()
+	for i, tagPairSet := range tagPairSets {
+		id, ok := wantedIds.Load(i)
+		assert.True(t, ok)
+		assert.True(t, Contains(index.GetSeriesIDsWithTagPairSet(tagPairSet), []int64{id.(int64)}))
 	}
 }
