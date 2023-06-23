@@ -196,6 +196,7 @@ func (p *SeriesPartition) FileSize() (n int64, err error) {
 
 // CreateSeriesListIfNotExists creates a list of series in bulk if they don't exist.
 // The ids parameter is modified to contain series IDs for all keys belonging to this partition.
+// 6.
 func (p *SeriesPartition) CreateSeriesListIfNotExists(keys [][]byte, keyPartitionIDs []int, ids []uint64) error {
 	var writeRequired bool
 	p.mu.RLock()

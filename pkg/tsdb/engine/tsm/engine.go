@@ -1810,6 +1810,7 @@ func (e *Engine) CreateSeriesListIfNotExists(keys, names [][]byte, tagsSlice []m
 	return e.index.CreateSeriesListIfNotExists(keys, names, tagsSlice)
 }
 
+// 1.
 func (e *Engine) CreateSeriesIfNotExists(key, name []byte, tags models.Tags) error {
 	return e.index.CreateSeriesIfNotExists(key, name, tags)
 }
@@ -2381,6 +2382,7 @@ func (e *Engine) CreateIterator(ctx context.Context, measurement string, opt que
 		return newMergeFinalizerIterator(ctx, inputs, opt, e.logger)
 	}
 
+	// b. this way
 	itrs, err := e.createVarRefIterator(ctx, measurement, opt)
 	if err != nil {
 		return nil, err
@@ -2519,6 +2521,7 @@ func (e *Engine) createCallIterator(ctx context.Context, measurement string, cal
 	return itrs, nil
 }
 
+// c.
 // createVarRefIterator creates an iterator for a variable reference.
 func (e *Engine) createVarRefIterator(ctx context.Context, measurement string, opt query.IteratorOptions) ([]query.Iterator, error) {
 	ref, _ := opt.Expr.(*influxql.VarRef)

@@ -676,6 +676,7 @@ cpu,host=serverB,region=uswest value=25  0
 			itr, err := sh.CreateIterator(context.Background(), m, query.IteratorOptions{
 				Expr:       influxql.MustParseExpr(`value`),
 				Aux:        []influxql.VarRef{{Val: "val2"}},
+				// dimension is for tag?
 				Dimensions: []string{"host"},
 				Ascending:  true,
 				StartTime:  influxql.MinTime,
@@ -755,6 +756,7 @@ cpu,host=serverB,region=uswest value=25  0
 		var err error
 		m = &influxql.Measurement{Name: "cpu"}
 		itr, err := sh.CreateIterator(context.Background(), m, query.IteratorOptions{
+			// how does this parse function return?
 			Expr:       influxql.MustParseExpr(`value`),
 			Aux:        []influxql.VarRef{{Val: "val2"}},
 			Dimensions: []string{"host"},

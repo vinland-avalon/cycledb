@@ -1017,6 +1017,7 @@ func (s *Shard) CreateIterator(ctx context.Context, m *influxql.Measurement, opt
 	return engine.CreateIterator(ctx, m.Name, opt)
 }
 
+// a.
 func (s *Shard) CreateSeriesCursor(ctx context.Context, req SeriesCursorRequest, cond influxql.Expr) (SeriesCursor, error) {
 	index, err := s.Index()
 	if err != nil {

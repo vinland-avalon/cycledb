@@ -6,7 +6,7 @@ https://cloud.tencent.com/developer/article/1397217
 ### SeriesFile
 It could also be named as `SeriesKeyFile`, for it stores keys(measurement + tag set) for all series, and is shared by all shards, across the entire database.
 ### SeriesIndex
-- Two maps there: sereisKey -> id, id -> offset
+- Two maps there: sereisKey -> id, id -> offset, the relatsionship between series index and tsi? They are totally different.
 - seriesKey: measurement + tags;
 - seriesID: in one DB, can be used to identify a unique sereis. About how to generate:  
 Influxdb将paritition数量定死了为 8, 就是说所有的serieskey放在这8个桶里

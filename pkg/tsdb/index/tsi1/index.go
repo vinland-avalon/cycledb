@@ -748,6 +748,7 @@ func (i *Index) CreateSeriesListIfNotExists(keys [][]byte, names [][]byte, tagsS
 	return nil
 }
 
+// 2.
 // CreateSeriesIfNotExists creates a series if it doesn't exist or is deleted.
 func (i *Index) CreateSeriesIfNotExists(key, name []byte, tags models.Tags) error {
 	ids, err := i.partition(key).createSeriesListIfNotExists([][]byte{name}, []models.Tags{tags})
@@ -970,6 +971,7 @@ func (i *Index) TagKeyIterator(name []byte) (tsdb.TagKeyIterator, error) {
 	return tsdb.MergeTagKeyIterators(a...), nil
 }
 
+// a.
 // TagValueIterator returns an iterator for all values across a single key.
 func (i *Index) TagValueIterator(name, key []byte) (tsdb.TagValueIterator, error) {
 	a := make([]tsdb.TagValueIterator, 0, len(i.partitions))
@@ -982,6 +984,7 @@ func (i *Index) TagValueIterator(name, key []byte) (tsdb.TagValueIterator, error
 	return tsdb.MergeTagValueIterators(a...), nil
 }
 
+// b.
 // TagKeySeriesIDIterator returns a series iterator for all values across a single key.
 func (i *Index) TagKeySeriesIDIterator(name, key []byte) (tsdb.SeriesIDIterator, error) {
 	a := make([]tsdb.SeriesIDIterator, 0, len(i.partitions))
@@ -996,6 +999,7 @@ func (i *Index) TagKeySeriesIDIterator(name, key []byte) (tsdb.SeriesIDIterator,
 	return tsdb.MergeSeriesIDIterators(a...), nil
 }
 
+// c.
 // TagValueSeriesIDIterator returns a series iterator for a single tag value.
 func (i *Index) TagValueSeriesIDIterator(name, key, value []byte) (tsdb.SeriesIDIterator, error) {
 	// Check series ID set cache...
