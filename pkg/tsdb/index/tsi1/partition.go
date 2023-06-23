@@ -708,6 +708,7 @@ func (p *Partition) DropMeasurement(name []byte) error {
 
 // createSeriesListIfNotExists creates a list of series if they doesn't exist in
 // bulk.
+// 3.
 func (p *Partition) createSeriesListIfNotExists(names [][]byte, tagsSlice []models.Tags) ([]uint64, error) {
 	// Is there anything to do? The partition may have been sent an empty batch.
 	if len(names) == 0 {

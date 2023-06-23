@@ -49,7 +49,7 @@ type SeriesIndex struct {
 
 	// In-memory data since rebuild.
 	keyIDMap    *rhh.HashMap
-	idOffsetMap map[uint64]int64
+	idOffsetMap map[uint64]int64	
 	tombstones  map[uint64]struct{}
 }
 
@@ -161,6 +161,7 @@ func (idx *SeriesIndex) IsDeleted(id uint64) bool {
 	return idx.FindOffsetByID(id) == 0
 }
 
+// 7.
 func (idx *SeriesIndex) execEntry(flag uint8, id uint64, offset int64, key []byte) {
 	switch flag {
 	case SeriesEntryInsertFlag:

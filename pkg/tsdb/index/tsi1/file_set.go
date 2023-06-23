@@ -339,6 +339,7 @@ func (fs *FileSet) TagValueIterator(name, key []byte) TagValueIterator {
 	return MergeTagValueIterators(a...)
 }
 
+// d.
 // TagValueSeriesIDIterator returns a series iterator for a single tag value.
 func (fs *FileSet) TagValueSeriesIDIterator(name, key, value []byte) (tsdb.SeriesIDIterator, error) {
 	ss := tsdb.NewSeriesIDSet()
