@@ -38,6 +38,7 @@ func TestLogFile_AddSeriesList(t *testing.T) {
 			models.NewTags(map[string]string{"region": "us-east"}),
 			models.NewTags(map[string]string{"host": "serverA"}),
 		},
+		[]uint64{},
 	)
 
 	if err != nil {
@@ -57,6 +58,7 @@ func TestLogFile_AddSeriesList(t *testing.T) {
 			models.NewTags(map[string]string{"region": "us-west"}),
 			models.NewTags(map[string]string{"host": "serverA"}),
 		},
+		[]uint64{},
 	)
 
 	if err != nil {
@@ -78,6 +80,7 @@ func TestLogFile_AddSeriesList(t *testing.T) {
 			models.NewTags(map[string]string{"region": "us-west"}),
 			models.NewTags(map[string]string{"host": "serverA"}),
 		},
+		[]uint64{},
 	)
 
 	if err != nil {
@@ -135,7 +138,7 @@ func TestLogFile_SeriesStoredInOrder(t *testing.T) {
 		}, []models.Tags{
 			{models.NewTag([]byte("host"), []byte(tv))},
 			{models.NewTag([]byte("host"), []byte(tv))},
-		}); err != nil {
+		},[]uint64{}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -188,7 +191,7 @@ func TestLogFile_DeleteMeasurement(t *testing.T) {
 		{{Key: []byte("host"), Value: []byte("serverA")}},
 		{{Key: []byte("region"), Value: []byte("us-east")}},
 		{{Key: []byte("region"), Value: []byte("us-west")}},
-	}); err != nil {
+	},[]uint64{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -219,7 +222,7 @@ func TestLogFile_Open(t *testing.T) {
 		defer f.Close()
 
 		// Add test data & close.
-		if _, err := f.AddSeriesList(seriesSet, [][]byte{[]byte("cpu"), []byte("mem")}, []models.Tags{{{}}, {{}}}); err != nil {
+		if _, err := f.AddSeriesList(seriesSet, [][]byte{[]byte("cpu"), []byte("mem")}, []models.Tags{{{}}, {{}}},[]uint64{}); err != nil {
 			t.Fatal(err)
 		} else if err := f.LogFile.Close(); err != nil {
 			t.Fatal(err)
@@ -247,7 +250,7 @@ func TestLogFile_Open(t *testing.T) {
 		}
 
 		// Add more data & reopen.
-		if _, err := f.AddSeriesList(seriesSet, [][]byte{[]byte("disk")}, []models.Tags{{{}}}); err != nil {
+		if _, err := f.AddSeriesList(seriesSet, [][]byte{[]byte("disk")}, []models.Tags{{{}}}, []uint64{}); err != nil {
 			t.Fatal(err)
 		} else if err := f.Reopen(); err != nil {
 			t.Fatal(err)
@@ -279,7 +282,7 @@ func TestLogFile_Open(t *testing.T) {
 		defer f.Close()
 
 		// Add test data & close.
-		if _, err := f.AddSeriesList(seriesSet, [][]byte{[]byte("cpu"), []byte("mem")}, []models.Tags{{{}}, {{}}}); err != nil {
+		if _, err := f.AddSeriesList(seriesSet, [][]byte{[]byte("cpu"), []byte("mem")}, []models.Tags{{{}}, {{}}}, []uint64{}); err != nil {
 			t.Fatal(err)
 		} else if err := f.LogFile.Close(); err != nil {
 			t.Fatal(err)
@@ -345,7 +348,7 @@ func TestLogFile_MeasurementHasSeries(t *testing.T) {
 			tags[j] = tag
 		}
 
-		ids, err := f.AddSeriesList(seriesSet, names, tags)
+		ids, err := f.AddSeriesList(seriesSet, names, tags, []uint64{})
 		require.NoError(t, err)
 
 		if i == 0 {
@@ -414,7 +417,7 @@ func CreateLogFile(sfile *tsdb.SeriesFile, series []Series) (*LogFile, error) {
 	f := MustOpenLogFile(sfile)
 	seriesSet := tsdb.NewSeriesIDSet()
 	for _, serie := range series {
-		if _, err := f.AddSeriesList(seriesSet, [][]byte{serie.Name}, []models.Tags{serie.Tags}); err != nil {
+		if _, err := f.AddSeriesList(seriesSet, [][]byte{serie.Name}, []models.Tags{serie.Tags}, []uint64{}); err != nil {
 			return nil, err
 		}
 	}
@@ -439,7 +442,7 @@ func GenerateLogFile(sfile *tsdb.SeriesFile, measurementN, tagN, valueN int) (*L
 				value := []byte(fmt.Sprintf("value%d", (j / pow(valueN, k) % valueN)))
 				tags = append(tags, models.NewTag(key, value))
 			}
-			if _, err := f.AddSeriesList(seriesSet, [][]byte{name}, []models.Tags{tags}); err != nil {
+			if _, err := f.AddSeriesList(seriesSet, [][]byte{name}, []models.Tags{tags}, []uint64{}); err != nil {
 				return nil, err
 			}
 		}
@@ -486,7 +489,7 @@ func benchmarkLogFile_AddSeries(b *testing.B, measurementN, seriesKeyN, seriesVa
 
 	for i := 0; i < b.N; i++ {
 		for _, d := range data {
-			if _, err := f.AddSeriesList(seriesSet, [][]byte{d.Name}, []models.Tags{d.Tags}); err != nil {
+			if _, err := f.AddSeriesList(seriesSet, [][]byte{d.Name}, []models.Tags{d.Tags}, []uint64{}); err != nil {
 				b.Fatal(err)
 			}
 		}
@@ -525,6 +528,7 @@ func BenchmarkLogFile_WriteTo(b *testing.B) {
 						{Key: []byte("host"), Value: []byte(fmt.Sprintf("server-%d", i))},
 						{Key: []byte("location"), Value: []byte("us-west")},
 					}},
+					[]uint64{},
 				); err != nil {
 					b.Fatal(err)
 				}
@@ -581,7 +585,7 @@ func benchmarkLogFile_MeasurementHasSeries(b *testing.B, seriesKeyN, seriesValue
 			tags[j] = tag
 		}
 
-		ids, err := f.AddSeriesList(seriesSet, names, tags)
+		ids, err := f.AddSeriesList(seriesSet, names, tags, []uint64{})
 		require.NoError(b, err)
 
 		if i == 0 {

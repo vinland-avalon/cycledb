@@ -1,6 +1,10 @@
 package tsi2
 
-import "math"
+import (
+	"math"
+
+	"github.com/influxdata/influxdb/v2/models"
+)
 
 func PowInt(x, y int) int {
 	return int(math.Pow(float64(x), float64(y)))
@@ -42,4 +46,67 @@ func VariableBaseConvert(dimensions [][]int, idx int, previous []int64) []int64 
 		}
 		return VariableBaseConvert(dimensions, idx+1, curr)
 	}
+}
+
+// func tagsConvert(tags []TagPair) (models.Tags){
+// 	m := map[string]string{}
+// 	for _, tag := range tags {
+// 		m[tag.TagKey]=tag.TagValue
+// 	}
+// 	return models.NewTags(m)
+// }
+
+func tagsConvert(tags models.Tags) ([] TagPair){
+	res := make([]TagPair, 0, tags.Len())
+	for _, tag := range tags {
+		res = append(res, TagPair{TagKey: string(tag.Key), TagValue: string(tag.Value)})
+	}
+	return res
+}
+
+// unionStringSets returns the union of two sets
+func unionStringSets(a, b map[string]struct{}) map[string]struct{} {
+	other := make(map[string]struct{})
+	for k := range a {
+		other[k] = struct{}{}
+	}
+	for k := range b {
+		other[k] = struct{}{}
+	}
+	return other
+}
+
+// intersectStringSets returns the intersection of two sets.
+func intersectStringSets(a, b map[string]struct{}) map[string]struct{} {
+	if len(a) < len(b) {
+		a, b = b, a
+	}
+
+	other := make(map[string]struct{})
+	for k := range a {
+		if _, ok := b[k]; ok {
+			other[k] = struct{}{}
+		}
+	}
+	return other
+}
+
+// unionStringSets returns the union of two sets
+func unionStringSets2(a map[string]struct{}, b map[string]int) map[string]struct{} {
+	other := make(map[string]struct{})
+	for k := range a {
+		other[k] = struct{}{}
+	}
+	for k := range b {
+		other[k] = struct{}{}
+	}
+	return other
+}
+
+func mapToSlice(m map[string]struct{}) [][]byte {
+	res := make([][]byte, 0, len(m))
+	for key, _ := range m {
+		res = append(res, []byte(key))
+	}
+	return res
 }

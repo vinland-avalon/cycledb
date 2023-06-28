@@ -1,5 +1,7 @@
 package tsi2
 
+import "cycledb/pkg/tsdb"
+
 type Grid struct {
 	// the grids are linked, so id should skip
 	offset int64
@@ -9,6 +11,9 @@ type Grid struct {
 	tagKeys    []string
 	// to accelerate search
 	tagKeyToIndex map[string]int
+
+	// bitmap
+	seriesIDSet *tsdb.SeriesIDSet
 }
 
 func initGrid(offset int64, tagPairSet []TagPair, tagValuess []*TagValues) *Grid {
@@ -17,6 +22,7 @@ func initGrid(offset int64, tagPairSet []TagPair, tagValuess []*TagValues) *Grid
 		tagValuess:    tagValuess,
 		tagKeys:       []string{},
 		tagKeyToIndex: map[string]int{},
+		seriesIDSet: tsdb.NewSeriesIDSet(),
 	}
 	for i, tagPair := range tagPairSet {
 		g.tagKeyToIndex[tagPair.TagKey] = i
@@ -32,14 +38,14 @@ func (g *Grid) getGridSize() int {
 
 // getCapacityOfIDs: the number of ids in this grid
 func (g *Grid) getCapacityOfIDs() int {
-	length := 1
+	capacity := 1
 	for _, tagValues := range g.tagValuess {
-		length *= tagValues.capacity
+		capacity *= tagValues.capacity
 	}
-	return length
+	return capacity
 }
 
-func (g *Grid) tagPairExists(tagPair TagPair) bool {
+func (g *Grid) tagValueExists(tagPair TagPair) bool {
 	if tagValuesIndex, ok := g.tagKeyToIndex[tagPair.TagKey]; !ok {
 		return false
 	} else {
@@ -52,32 +58,28 @@ func (g *Grid) tagPairExists(tagPair TagPair) bool {
 }
 
 // GetStrictlyMatchedIDForTagPairSet: return -1 if not find it, else return id
-func (g *Grid) GetStrictlyMatchedIDForTagPairSet(tagPairSet []TagPair) int64 {
+func (g *Grid) GetStrictlyMatchedIDForTagPairSet(tagPairSet []TagPair) *tsdb.SeriesIDSet {
 	if len(tagPairSet) != g.getGridSize() {
-		return int64(-1)
+		return nil
 	}
 
-	ids := g.GetSeriesIDsWithTagPairSet(tagPairSet)
-	if len(ids) == 0 {
-		return int64(-1)
-	}
-	return ids[0]
+	return g.GetSeriesIDsWithTagPairSet(tagPairSet)
 }
 
 // SetTagPairSet: return whether the insert succeed and the corresponding id.
-// If fails, return -1.
+// If fails, return nil.
 // Only when tags matches and all have free slot, the insert succeeds.
-func (g *Grid) SetTagPairSet(tagPairSet []TagPair) int64 {
+func (g *Grid) SetTagPairSet(tagPairSet []TagPair) *tsdb.SeriesIDSet {
 	if !g.ableToSetTagPairSet(tagPairSet) {
-		return -1
+		return nil
 	}
-	// get the tag pairs already exists, which means they don't need to be inserted
+	// get the tag pairs already exist, which means they don't need to be inserted
 	existedTagPairIndex := map[int]struct{}{}
 	for i, tagPair := range tagPairSet {
 		index, ok := g.tagKeyToIndex[tagPair.TagKey]
 		// the tag key does not match
 		if !ok {
-			return -1
+			return nil
 		}
 
 		// if value already exist, no need to insert
@@ -98,7 +100,9 @@ func (g *Grid) SetTagPairSet(tagPairSet []TagPair) int64 {
 	}
 
 	// calculate id
-	return g.GetStrictlyMatchedIDForTagPairSet(tagPairSet)
+	idSet := g.GetStrictlyMatchedIDForTagPairSet(tagPairSet)
+	g.seriesIDSet.MergeInPlace(idSet)
+	return idSet
 }
 
 // TODO(vinland-avalon): also need to judge if whole tag pairs already exist
@@ -144,22 +148,23 @@ func (g *Grid) tagKeyExistsAndFilledUp(tagKey string) bool {
 	return false
 }
 
-func (g *Grid) GetSeriesIDsWithTagPairSet(tagPairSet []TagPair) []int64 {
+func (g *Grid) GetSeriesIDsWithTagPairSet(tagPairSet []TagPair) *tsdb.SeriesIDSet {
 	// check if tag pairs match
 	if len(tagPairSet) > g.getGridSize() {
-		return []int64{}
+		return nil
 	}
 	for _, tagPair := range tagPairSet {
-		if !g.tagPairExists(tagPair) {
-			return []int64{}
+		if !g.tagValueExists(tagPair) {
+			return nil
 		}
 	}
 
 	// TODO(vinland-avalon): not support non-condition search so far
 	if len(tagPairSet) == 0 {
-		return []int64{}
+		return nil
 	}
 
+	// [index, capacity]
 	dimensions := make([][]int, 0, g.getGridSize())
 	for i := range g.tagKeys {
 		dimensions = append(dimensions, []int{-1, g.tagValuess[i].capacity})
@@ -179,8 +184,13 @@ func (g *Grid) GetSeriesIDsWithTagPairSet(tagPairSet []TagPair) []int64 {
 		}
 	}
 	ids := VariableBaseConvert(dimensions, 1, prev)
+
+	idsSet := tsdb.NewSeriesIDSet()
+
 	for i := range ids {
 		ids[i] += g.offset
+		idsSet.Add(uint64(ids[i]))
 	}
-	return ids
+
+	return idsSet.And(g.seriesIDSet)
 }

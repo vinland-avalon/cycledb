@@ -19,6 +19,7 @@ import (
 var (
 	ErrSeriesPartitionClosed              = errors.New("tsdb: series partition closed")
 	ErrSeriesPartitionCompactionCancelled = errors.New("tsdb: series partition compaction cancelled")
+	ErrSeriesPartitionDesignatedIdsDismatch = errors.New("tsdb: series partition mismatch wanted ids with keys when creating series")
 )
 
 // DefaultSeriesPartitionCompactThreshold is the number of series IDs to hold in the in-memory
@@ -39,6 +40,8 @@ type SeriesPartition struct {
 	segments []*SeriesSegment
 	index    *SeriesIndex
 	seq      uint64 // series id sequence
+	DesignateId bool
+	
 
 	compacting          bool
 	compactionLimiter   limiter.Fixed
@@ -196,7 +199,7 @@ func (p *SeriesPartition) FileSize() (n int64, err error) {
 
 // CreateSeriesListIfNotExists creates a list of series in bulk if they don't exist.
 // The ids parameter is modified to contain series IDs for all keys belonging to this partition.
-func (p *SeriesPartition) CreateSeriesListIfNotExists(keys [][]byte, keyPartitionIDs []int, ids []uint64) error {
+func (p *SeriesPartition) CreateSeriesListIfNotExists(keys [][]byte, keyPartitionIDs []int, ids []uint64, wantedIds []uint64) error {
 	var writeRequired bool
 	p.mu.RLock()
 	if p.closed {
@@ -238,6 +241,10 @@ func (p *SeriesPartition) CreateSeriesListIfNotExists(keys [][]byte, keyPartitio
 	// Track offsets of duplicate series.
 	newIDs := make(map[string]uint64, len(ids))
 
+	if p.DesignateId && len(wantedIds) != len(keys) {
+		return ErrSeriesPartitionDesignatedIdsDismatch
+	}
+
 	for i := range keys {
 		// Skip series that don't belong to the partition or have already been created.
 		if keyPartitionIDs[i] != p.id || ids[i] != 0 {
@@ -253,9 +260,19 @@ func (p *SeriesPartition) CreateSeriesListIfNotExists(keys [][]byte, keyPartitio
 		}
 
 		// Write to series log and save offset.
-		id, offset, err := p.insert(key)
-		if err != nil {
-			return err
+		var id uint64
+		var offset int64
+		var err error
+		if p.DesignateId {
+			id, offset, err = p.insertWithId(key, wantedIds[i])
+			if err != nil {
+				return err
+			}
+		} else {
+			id, offset, err = p.insert(key)
+			if err != nil {
+				return err
+			}
 		}
 		// Append new key to be added to hash map after flush.
 		ids[i] = id
@@ -451,6 +468,14 @@ func (p *SeriesPartition) insert(key []byte) (id uint64, offset int64, err error
 
 	p.seq += SeriesFilePartitionN
 	return id, offset, nil
+}
+
+func (p *SeriesPartition) insertWithId(key []byte, wantedId uint64) (id uint64, offset int64, err error) {
+	offset, err = p.writeLogEntry(AppendSeriesEntry(nil, SeriesEntryInsertFlag, wantedId, key))
+	if err != nil {
+		return 0, 0, err
+	}
+	return wantedId, offset, nil
 }
 
 // writeLogEntry appends an entry to the end of the active segment.

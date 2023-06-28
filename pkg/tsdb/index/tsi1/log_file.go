@@ -517,9 +517,10 @@ func (f *LogFile) DeleteTagValue(name, key, value []byte) error {
 }
 
 // AddSeriesList adds a list of series to the log file in bulk.
-func (f *LogFile) AddSeriesList(seriesSet *tsdb.SeriesIDSet, names [][]byte, tagsSlice []models.Tags) ([]uint64, error) {
+// You can look at here about how bitmap works
+func (f *LogFile) AddSeriesList(seriesSet *tsdb.SeriesIDSet, names [][]byte, tagsSlice []models.Tags, wantedIds []uint64) ([]uint64, error) {
 	// README.md (tsi), Writes - step 1
-	seriesIDs, err := f.sfile.CreateSeriesListIfNotExists(names, tagsSlice)
+	seriesIDs, err := f.sfile.CreateSeriesListIfNotExists(names, tagsSlice, wantedIds)
 	if err != nil {
 		return nil, err
 	}

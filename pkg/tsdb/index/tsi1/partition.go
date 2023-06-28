@@ -708,7 +708,7 @@ func (p *Partition) DropMeasurement(name []byte) error {
 
 // createSeriesListIfNotExists creates a list of series if they doesn't exist in
 // bulk.
-func (p *Partition) createSeriesListIfNotExists(names [][]byte, tagsSlice []models.Tags) ([]uint64, error) {
+func (p *Partition) createSeriesListIfNotExists(names [][]byte, tagsSlice []models.Tags, wantedIds []uint64) ([]uint64, error) {
 	// Is there anything to do? The partition may have been sent an empty batch.
 	if len(names) == 0 {
 		return nil, nil
@@ -726,7 +726,7 @@ func (p *Partition) createSeriesListIfNotExists(names [][]byte, tagsSlice []mode
 	// Ensure fileset cannot change during insert.
 	p.mu.RLock()
 	// Insert series into log file.
-	ids, err := p.activeLogFile.AddSeriesList(p.seriesIDSet, names, tagsSlice)
+	ids, err := p.activeLogFile.AddSeriesList(p.seriesIDSet, names, tagsSlice, wantedIds)
 	if err != nil {
 		p.mu.RUnlock()
 		return nil, err
