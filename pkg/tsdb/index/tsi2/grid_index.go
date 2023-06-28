@@ -153,3 +153,31 @@ func (gi *GridIndex) NewTagValueIterator(key string) *TagValueIterator {
 		values: slice,
 	}
 }
+
+func (gi *GridIndex) SeriesIDSet() *tsdb.SeriesIDSet {
+	idsSet := tsdb.NewSeriesIDSet()
+	for _, g := range gi.grids {
+		idsSet.MergeInPlace(g.GetSeriesIDsWithTagPairSet([]TagPair{}))
+	}
+	return idsSet
+}
+
+func (gi *GridIndex) SeriesIDSetWithTagKey(key string) *tsdb.SeriesIDSet {
+	idsSet := tsdb.NewSeriesIDSet()
+	for _, g := range gi.grids {
+		if g.HasTagKey(key) {
+			idsSet.MergeInPlace(g.GetSeriesIDsWithTagPairSet([]TagPair{}))
+		}
+	}
+	return idsSet
+}
+
+func (gi *GridIndex) SeriesIDSetWithTagValue(key, value string) *tsdb.SeriesIDSet {
+	idsSet := tsdb.NewSeriesIDSet()
+	for _, g := range gi.grids {
+		if g.HasTagValue(key, value) {
+			idsSet.MergeInPlace(g.GetSeriesIDsWithTagPairSet([]TagPair{{TagKey: key, TagValue: value}}))
+		}
+	}
+	return idsSet
+}

@@ -136,8 +136,11 @@ func (i *Index) CreateSeriesListIfNotExists(keys, names [][]byte, tagsSlice []mo
 				i.measurements.AppendMeasurement(names[index])
 			}
 			// todo(vinland): use model.tags for set function directly
-			id := i.measurements.SetTagPairSet(names[index], tagsSlice[index])
-			newIDs = append(newIDs, uint64(id))
+			id, success := i.measurements.SetTagPairSet(names[index], tagsSlice[index])
+			if !success {
+				return ErrFailToSetSeriesKey
+			}
+			newIDs = append(newIDs, id)
 		}
 	}
 
@@ -300,14 +303,16 @@ func (i *Index) TagValueIterator(name, key []byte) (tsdb.TagValueIterator, error
 	return NewTagValueIterator(m.gIndex, key), nil
 }
 
-// todo: iterators for series ids should be filtered with bit map
 func (i *Index) MeasurementSeriesIDIterator(name []byte) (tsdb.SeriesIDIterator, error) {
-	ok, err := i.MeasurementExists(name)
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		return nil, nil
-	}
 	return i.measurements.MeasurementSeriesIDIterator(name)
 }
+
+func (i *Index) TagKeySeriesIDIterator(name, key []byte) (tsdb.SeriesIDIterator, error) {
+	return i.measurements.TagKeySeriesIDIterator(name, key)
+}
+
+func (i *Index) TagValueSeriesIDIterator(name, key, value []byte) (tsdb.SeriesIDIterator, error) {
+	return i.measurements.TagValueSeriesIDIterator(name, key, value)
+}
+
+

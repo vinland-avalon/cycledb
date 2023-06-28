@@ -31,6 +31,27 @@ func initGrid(offset uint64, tagPairSet []TagPair, tagValuess []*TagValues) *Gri
 	return g
 }
 
+func (g *Grid) HasTagKey (key string) bool {
+	if _, ok := g.tagKeyToIndex[key]; ok {
+		return true
+	}
+	return false
+}
+
+func (g *Grid) HasTagValue (key, value string) bool {
+	if index, ok := g.tagKeyToIndex[key]; !ok {
+		return false
+	} else {
+		values := g.tagValuess[index]
+		if _, ok = values.valueToIndex[value]; !ok {
+			return false
+		} else {
+			return true
+		}
+	}
+	
+}
+
 // getGridSize: return the number of tag keys inside
 func (g *Grid) getGridSize() int {
 	return len(g.tagKeys)
@@ -171,10 +192,7 @@ func (g *Grid) tagKeyExistsAndFilledUp(tagKey string) bool {
 
 	// filled up already
 	tagValues := g.tagValuess[index]
-	if tagValues.capacity == len(tagValues.values) {
-		return true
-	}
-	return false
+	return tagValues.capacity == len(tagValues.values)
 }
 
 func (g *Grid) GetSeriesIDsWithTagPairSet(tagPairSet []TagPair) *tsdb.SeriesIDSet {
@@ -194,8 +212,10 @@ func (g *Grid) GetSeriesIDsWithTagPairSetWithoutIDSet(tagPairSet []TagPair) *tsd
 		}
 	}
 
-	// TODO(vinland-avalon): not support non-condition search so far
 	if len(tagPairSet) == 0 {
+		g.seriesIDSet.ForEach(func (id uint64) {
+			idsSet.Add(id + g.offset)
+		})
 		return idsSet
 	}
 
