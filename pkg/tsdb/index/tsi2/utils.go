@@ -27,21 +27,21 @@ func IfTagPairsEqual(a, b []TagPair) bool {
 }
 
 // VariableBaseConvert: dimension: [[value,capacity]], if value==all, value==-1
-func VariableBaseConvert(dimensions [][]int, idx int, previous []int64) []int64 {
+func VariableBaseConvert(dimensions [][]int, idx int, previous []uint64) []uint64 {
 	if idx == len(dimensions) {
 		return previous
 	}
 	d := dimensions[idx]
 	if d[0] != -1 {
 		for i := range previous {
-			previous[i] = previous[i]*int64(d[1]) + int64(d[0])
+			previous[i] = previous[i]*uint64(d[1]) + uint64(d[0])
 		}
 		return VariableBaseConvert(dimensions, idx+1, previous)
 	} else {
-		curr := make([]int64, 0, len(previous)*d[1])
+		curr := make([]uint64, 0, len(previous)*d[1])
 		for i := 0; i < d[1]; i++ {
 			for j := range previous {
-				curr = append(curr, previous[j]*int64(d[1])+int64(i))
+				curr = append(curr, previous[j]*uint64(d[1])+uint64(i))
 			}
 		}
 		return VariableBaseConvert(dimensions, idx+1, curr)

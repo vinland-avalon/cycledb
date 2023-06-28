@@ -68,12 +68,12 @@ func (ms *Measurements) SetTagPairSet(name []byte, tags models.Tags) int64 {
 		return -1
 	}
 	m := ms.measurements[measurementId]
-	idSet := m.gIndex.SetTagPairSet(tagsConvert(tags))
+	id, _ := m.gIndex.SetTagPairSet(tagsConvert(tags))
 	// return (int64(measurementId) << 32) | id
-	return ms.idSetWithMeasurementId(idSet)
+	return ms.idSetWithMeasurementId(id)
 }
 
-func (ms *Measurements) idSetWithMeasurementId(idSet *tsdb.SeriesIDSet) int64 {
+func (ms *Measurements) idSetWithMeasurementId(id uint64) int64 {
 	panic("unimplemented")
 }
 

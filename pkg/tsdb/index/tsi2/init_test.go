@@ -78,6 +78,19 @@ func Contains(a, b []int64) bool {
 	return true
 }
 
+func ContainsUint64(a, b []uint64) bool {
+	m := map[uint64]struct{}{}
+	for _, v := range a {
+		m[v] = struct{}{}
+	}
+	for _, v := range b {
+		if _, ok := m[v]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
 func randomSelectTagPairSets(tagPairSets [][]tsi2.TagPair, queryNum int) [][]tsi2.TagPair {
 	selectedSets := [][]tsi2.TagPair{}
 	for i := 0; i < queryNum; i++ {
