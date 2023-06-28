@@ -1,6 +1,9 @@
 package tsi2
 
-import "sync"
+import (
+	"cycledb/pkg/tsdb"
+	"sync"
+)
 
 // for benchmark comparation
 type InvertIndex struct {
@@ -13,6 +16,8 @@ type InvertIndex struct {
 	// 1. partition
 	// 2. limit the zone that lock protects
 	mu sync.RWMutex
+
+	seriesIDSet *tsdb.SeriesIDSet
 }
 
 func NewInvertIndex() *InvertIndex {
@@ -21,6 +26,7 @@ func NewInvertIndex() *InvertIndex {
 		idToTagPairSet: map[int64][]TagPair{},
 		idCnt:          0,
 		mu:             sync.RWMutex{},
+		seriesIDSet:    tsdb.NewSeriesIDSet(),
 	}
 }
 
@@ -95,6 +101,7 @@ func (ii *InvertIndex) SetTagPairSet(tagPairSet []TagPair) (bool, int64) {
 
 	ii.idToTagPairSet[currId] = tagPairSet
 	ii.idCnt++
+	ii.seriesIDSet.Add(uint64(currId))
 	return true, currId
 }
 

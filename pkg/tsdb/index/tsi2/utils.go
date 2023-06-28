@@ -56,7 +56,7 @@ func VariableBaseConvert(dimensions [][]int, idx int, previous []uint64) []uint6
 // 	return models.NewTags(m)
 // }
 
-func tagsConvert(tags models.Tags) ([] TagPair){
+func tagsConvert(tags models.Tags) []TagPair {
 	res := make([]TagPair, 0, tags.Len())
 	for _, tag := range tags {
 		res = append(res, TagPair{TagKey: string(tag.Key), TagValue: string(tag.Value)})
@@ -109,4 +109,8 @@ func mapToSlice(m map[string]struct{}) [][]byte {
 		res = append(res, []byte(key))
 	}
 	return res
+}
+
+func SeriesIdWithMeasurementId(measurementId, id uint64) uint64 {
+	return measurementId<<32 | id
 }

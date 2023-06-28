@@ -3,13 +3,13 @@ package tsi2
 import "cycledb/pkg/tsdb"
 
 type MeasurementIterator struct {
-	ms *Measurements
+	ms   *Measurements
 	curr int
 }
 
-func NewMeasurementsIterator (m *Measurements) tsdb.MeasurementIterator {
+func NewMeasurementsIterator(m *Measurements) tsdb.MeasurementIterator {
 	return &MeasurementIterator{
-		ms: m,
+		ms:   m,
 		curr: 0,
 	}
 }
@@ -19,7 +19,7 @@ func (itr *MeasurementIterator) Close() (err error) { return nil }
 func (itr *MeasurementIterator) Next() ([]byte, error) {
 	for itr.curr < len(itr.ms.measurements) {
 		if itr.ms.measurements[itr.curr] != nil {
-			itr.curr++;
+			itr.curr++
 			return []byte(itr.ms.measurements[itr.curr].name), nil
 		}
 		itr.curr++
@@ -31,7 +31,7 @@ type TagKeyIterator struct {
 	keys [][]byte
 }
 
-func NewTagKeyIterator (gi *GridIndex) tsdb.TagKeyIterator {
+func NewTagKeyIterator(gi *GridIndex) tsdb.TagKeyIterator {
 	return gi.NewTagKeyIterator()
 }
 
@@ -49,7 +49,7 @@ type TagValueIterator struct {
 	values [][]byte
 }
 
-func NewTagValueIterator (gi *GridIndex, key []byte) tsdb.TagValueIterator {
+func NewTagValueIterator(gi *GridIndex, key []byte) tsdb.TagValueIterator {
 	return gi.NewTagValueIterator(string(key))
 }
 

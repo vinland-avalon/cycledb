@@ -22,8 +22,30 @@ func NewMeasurement(i *GridIndex, name string, measurementId uint64) *Measuremen
 }
 
 func (m *Measurement) SeriesIDSet() *tsdb.SeriesIDSet {
+	idsSet := m.gIndex.SeriesIDSet()
+	idsSet.ForEach(func(id uint64) {
+		idsSet.Remove(id)
+		idsSet.Add(SeriesIdWithMeasurementId(m.measurementId, id))
+	})
+	return idsSet
+}
 
-	return m.gIndex.SeriesIDSet()
+func (m *Measurement) SeriesIDSetWithTagKey(key []byte) *tsdb.SeriesIDSet {
+	idsSet := m.gIndex.SeriesIDSetWithTagKey(string(key))
+	idsSet.ForEach(func(id uint64) {
+		idsSet.Remove(id)
+		idsSet.Add(SeriesIdWithMeasurementId(m.measurementId, id))
+	})
+	return idsSet
+}
+
+func (m *Measurement) SeriesIDSetWithTagValue(key, value []byte) *tsdb.SeriesIDSet {
+	idsSet := m.gIndex.SeriesIDSetWithTagValue(string(key), string(value))
+	idsSet.ForEach(func(id uint64) {
+		idsSet.Remove(id)
+		idsSet.Add(SeriesIdWithMeasurementId(m.measurementId, id))
+	})
+	return idsSet
 }
 
 // one measurement map to one grid index
@@ -78,11 +100,7 @@ func (ms *Measurements) SetTagPairSet(name []byte, tags models.Tags) (uint64, bo
 		return id, false
 	}
 	// return (int64(measurementId) << 32) | id
-	return ms.SeriesIdWithMeasurementId(m.measurementId, id), true
-}
-
-func (ms *Measurements) SeriesIdWithMeasurementId(measurementId, id uint64) uint64 {
-	return measurementId << 32 | id
+	return SeriesIdWithMeasurementId(m.measurementId, id), true
 }
 
 func (ms *Measurements) HasTagKey(name, key []byte) (bool, error) {
@@ -108,18 +126,6 @@ func (ms *Measurements) MeasurementSeriesIDIterator(name []byte) (tsdb.SeriesIDI
 	}
 	return NewSeriesIDSetIterator(m.SeriesIDSet()), nil
 }
-
-// type MeasurementsIterator struct {
-// 	curr uint
-// 	ms *Measurements
-// }
-
-// func NewMeasurementsIterator(ms *Measurements) *MeasurementsIterator{
-// 	return &MeasurementsIterator{
-// 		curr: 0,
-
-// 	}
-// }
 
 func (ms *Measurements) TagKeySeriesIDIterator(name, key []byte) (tsdb.SeriesIDSetIterator, error) {
 	m, err := ms.MeasurementByName(name)

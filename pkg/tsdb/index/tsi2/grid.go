@@ -22,7 +22,7 @@ func initGrid(offset uint64, tagPairSet []TagPair, tagValuess []*TagValues) *Gri
 		tagValuess:    tagValuess,
 		tagKeys:       []string{},
 		tagKeyToIndex: map[string]int{},
-		seriesIDSet: tsdb.NewSeriesIDSet(),
+		seriesIDSet:   tsdb.NewSeriesIDSet(),
 	}
 	for i, tagPair := range tagPairSet {
 		g.tagKeyToIndex[tagPair.TagKey] = i
@@ -31,14 +31,14 @@ func initGrid(offset uint64, tagPairSet []TagPair, tagValuess []*TagValues) *Gri
 	return g
 }
 
-func (g *Grid) HasTagKey (key string) bool {
+func (g *Grid) HasTagKey(key string) bool {
 	if _, ok := g.tagKeyToIndex[key]; ok {
 		return true
 	}
 	return false
 }
 
-func (g *Grid) HasTagValue (key, value string) bool {
+func (g *Grid) HasTagValue(key, value string) bool {
 	if index, ok := g.tagKeyToIndex[key]; !ok {
 		return false
 	} else {
@@ -49,7 +49,7 @@ func (g *Grid) HasTagValue (key, value string) bool {
 			return true
 		}
 	}
-	
+
 }
 
 // getGridSize: return the number of tag keys inside
@@ -90,27 +90,23 @@ func (g *Grid) GetStrictlyMatchedIDForTagPairSet(tagPairSet []TagPair) (uint64, 
 	}
 
 	ids := []uint64{}
-	idSet.ForEach(func (id uint64) {
+	idSet.ForEach(func(id uint64) {
 		ids = append(ids, id)
 	})
 
 	return ids[0], true
 }
+
 // GetStrictlyMatchedIDForTagPairSet: return -1 if not find it, else return id
 func (g *Grid) GetStrictlyMatchedIDForTagPairSetWithoutIDSet(tagPairSet []TagPair) (uint64, bool) {
 	if len(tagPairSet) != g.getGridSize() {
 		return 0, false
 	}
 
-	idSet := g.GetSeriesIDsWithTagPairSetWithoutIDSet(tagPairSet)
-	if idSet == nil || idSet.Cardinality() == 0 {
+	ids := g.GetSeriesIDsWithTagPairSetWithoutIDSet(tagPairSet)
+	if len(ids) == 0 {
 		return 0, false
 	}
-
-	ids := []uint64{}
-	idSet.ForEach(func (id uint64) {
-		ids = append(ids, id)
-	})
 
 	return ids[0], true
 }
@@ -149,7 +145,7 @@ func (g *Grid) SetTagPairSet(tagPairSet []TagPair) (uint64, bool) {
 	}
 
 	// calculate id
-	
+
 	id, _ := g.GetStrictlyMatchedIDForTagPairSetWithoutIDSet(tagPairSet)
 	g.seriesIDSet.Add(id)
 	return id, true
@@ -196,27 +192,28 @@ func (g *Grid) tagKeyExistsAndFilledUp(tagKey string) bool {
 }
 
 func (g *Grid) GetSeriesIDsWithTagPairSet(tagPairSet []TagPair) *tsdb.SeriesIDSet {
-	idsSet := g.GetSeriesIDsWithTagPairSetWithoutIDSet(tagPairSet)
+	ids := g.GetSeriesIDsWithTagPairSetWithoutIDSet(tagPairSet)
+	idsSet := tsdb.NewSeriesIDSet(ids...)
 	return idsSet.And(g.seriesIDSet)
 }
 
-func (g *Grid) GetSeriesIDsWithTagPairSetWithoutIDSet(tagPairSet []TagPair) *tsdb.SeriesIDSet {
+func (g *Grid) GetSeriesIDsWithTagPairSetWithoutIDSet(tagPairSet []TagPair) []uint64 {
 	// check if tag pairs match
-	idsSet := tsdb.NewSeriesIDSet()
+	ids := []uint64{}
 	if len(tagPairSet) > g.getGridSize() {
-		return idsSet
+		return ids
 	}
 	for _, tagPair := range tagPairSet {
 		if !g.tagValueExists(tagPair) {
-			return idsSet
+			return ids
 		}
 	}
 
 	if len(tagPairSet) == 0 {
-		g.seriesIDSet.ForEach(func (id uint64) {
-			idsSet.Add(id + g.offset)
+		g.seriesIDSet.ForEach(func(id uint64) {
+			ids = append(ids, id+g.offset)
 		})
-		return idsSet
+		return ids
 	}
 
 	// [index, capacity]
@@ -238,12 +235,11 @@ func (g *Grid) GetSeriesIDsWithTagPairSetWithoutIDSet(tagPairSet []TagPair) *tsd
 			prev = append(prev, uint64(i))
 		}
 	}
-	ids := VariableBaseConvert(dimensions, 1, prev)
+	ids = VariableBaseConvert(dimensions, 1, prev)
 
 	for i := range ids {
 		ids[i] += g.offset
-		idsSet.Add(uint64(ids[i]))
 	}
 
-	return idsSet
+	return ids
 }

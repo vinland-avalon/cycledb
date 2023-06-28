@@ -5,8 +5,8 @@ import (
 	"regexp"
 
 	"github.com/influxdata/influxdb/pkg/bytesutil"
-	"github.com/influxdata/influxdb/pkg/estimator"
 	"github.com/influxdata/influxdb/v2/models"
+	"github.com/influxdata/influxdb/v2/pkg/estimator"
 	"github.com/influxdata/influxql"
 	"go.uber.org/zap"
 
@@ -32,11 +32,7 @@ type Index struct {
 	// mSketch, mTSketch estimator.Sketch // Measurement sketches, add, delete?
 	// sSketch, sTSketch estimator.Sketch // Series sketches
 
-	// Fast series lookup of series IDs in the series file that have been present
-	// in this partition. This set tracks both insertions and deletions of a series.
-	// whithin partition for tsi
-	// not actually used
-	seriesIDSet *tsdb.SeriesIDSet
+	fieldSet *tsdb.MeasurementFieldSet
 
 	// Index's version.
 	version int
@@ -54,7 +50,6 @@ func NewIndex(sfile *tsdb.SeriesFile, database string) *Index {
 
 func (i *Index) Open() error {
 	i.measurements = NewMeasurements()
-	i.seriesIDSet = tsdb.NewSeriesIDSet()
 	return nil
 }
 
@@ -190,7 +185,8 @@ func (i *Index) SeriesSketches() (estimator.Sketch, estimator.Sketch, error) {
 }
 
 func (i *Index) SeriesIDSet() *tsdb.SeriesIDSet {
-	return i.seriesIDSet
+	// return i.measurements.SeriesIDSet()
+	panic("unimplemented")
 }
 
 func (i *Index) SeriesN() int64 {
@@ -315,4 +311,29 @@ func (i *Index) TagValueSeriesIDIterator(name, key, value []byte) (tsdb.SeriesID
 	return i.measurements.TagValueSeriesIDIterator(name, key, value)
 }
 
+// Sets a shared fieldset from the engine.
+func (i *Index) FieldSet() *tsdb.MeasurementFieldSet {
+	return i.fieldSet
+}
+func (i *Index) SetFieldSet(fs *tsdb.MeasurementFieldSet) {
+	i.fieldSet = fs
+}
 
+// Size of the index on disk, if applicable.
+func (i *Index) DiskSizeBytes() int64 {
+	panic("unimplemented")
+}
+
+// Bytes estimates the memory footprint of this Index, in bytes.
+func (i *Index) Bytes() int {
+	panic("unimplemented")
+}
+
+func (i *Index) Type() string {
+	panic("unimplemented")
+}
+
+// Returns a unique reference ID to the index instance.
+func (i *Index) UniqueReferenceID() uintptr {
+	panic("unimplemented")
+}
