@@ -58,8 +58,8 @@ func (g *Grid) getGridSize() int {
 }
 
 // getCapacityOfIDs: the number of ids in this grid
-func (g *Grid) getCapacityOfIDs() int {
-	capacity := 1
+func (g *Grid) getCapacityOfIDs() uint64 {
+	capacity := uint64(1)
 	for _, tagValues := range g.tagValuess {
 		capacity *= tagValues.capacity
 	}
@@ -80,21 +80,11 @@ func (g *Grid) tagValueExists(tagPair TagPair) bool {
 
 // GetStrictlyMatchedIDForTagPairSet: return -1 if not find it, else return id
 func (g *Grid) GetStrictlyMatchedIDForTagPairSet(tagPairSet []TagPair) (uint64, bool) {
-	if len(tagPairSet) != g.getGridSize() {
+	id, ok := g.GetStrictlyMatchedIDForTagPairSetWithoutIDSet(tagPairSet)
+	if !ok || !g.seriesIDSet.Contains(id) {
 		return 0, false
 	}
-
-	idSet := g.GetSeriesIDsWithTagPairSet(tagPairSet)
-	if idSet == nil || idSet.Cardinality() == 0 {
-		return 0, false
-	}
-
-	ids := []uint64{}
-	idSet.ForEach(func(id uint64) {
-		ids = append(ids, id)
-	})
-
-	return ids[0], true
+	return id, true
 }
 
 // GetStrictlyMatchedIDForTagPairSet: return -1 if not find it, else return id
@@ -188,7 +178,7 @@ func (g *Grid) tagKeyExistsAndFilledUp(tagKey string) bool {
 
 	// filled up already
 	tagValues := g.tagValuess[index]
-	return tagValues.capacity == len(tagValues.values)
+	return tagValues.capacity == uint64(len(tagValues.values))
 }
 
 func (g *Grid) GetSeriesIDsWithTagPairSet(tagPairSet []TagPair) *tsdb.SeriesIDSet {
@@ -217,25 +207,27 @@ func (g *Grid) GetSeriesIDsWithTagPairSetWithoutIDSet(tagPairSet []TagPair) []ui
 	}
 
 	// [index, capacity]
-	dimensions := make([][]int, 0, g.getGridSize())
+	indexes := make([]int, 0, g.getGridSize())
+	capacities := make([]uint64, 0, g.getGridSize())
 	for i := range g.tagKeys {
-		dimensions = append(dimensions, []int{-1, g.tagValuess[i].capacity})
+		indexes = append(indexes, -1)
+		capacities = append(capacities, g.tagValuess[i].capacity)
 	}
 	for _, tagPair := range tagPairSet {
 		idx := g.tagKeyToIndex[tagPair.TagKey]
 		valueIdx := g.tagValuess[idx].GetValueIndex(tagPair.TagValue)
-		dimensions[idx][0] = valueIdx
+		indexes[idx] = valueIdx
 	}
 
 	prev := []uint64{}
-	if dimensions[0][0] != -1 {
-		prev = append(prev, uint64(dimensions[0][0]))
+	if indexes[0] != -1 {
+		prev = append(prev, uint64(indexes[0]))
 	} else {
-		for i := 0; i < dimensions[0][1]; i++ {
-			prev = append(prev, uint64(i))
+		for i := uint64(0); i < capacities[0]; i++ {
+			prev = append(prev, i)
 		}
 	}
-	ids = VariableBaseConvert(dimensions, 1, prev)
+	ids = VariableBaseConvert(indexes, capacities, 1, prev)
 
 	for i := range ids {
 		ids[i] += g.offset

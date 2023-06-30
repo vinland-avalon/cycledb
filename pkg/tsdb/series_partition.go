@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	ErrSeriesPartitionClosed              = errors.New("tsdb: series partition closed")
-	ErrSeriesPartitionCompactionCancelled = errors.New("tsdb: series partition compaction cancelled")
+	ErrSeriesPartitionClosed                = errors.New("tsdb: series partition closed")
+	ErrSeriesPartitionCompactionCancelled   = errors.New("tsdb: series partition compaction cancelled")
 	ErrSeriesPartitionDesignatedIdsDismatch = errors.New("tsdb: series partition mismatch wanted ids with keys when creating series")
 )
 
@@ -37,11 +37,10 @@ type SeriesPartition struct {
 	closing chan struct{}
 	once    sync.Once
 
-	segments []*SeriesSegment
-	index    *SeriesIndex
-	seq      uint64 // series id sequence
+	segments    []*SeriesSegment
+	index       *SeriesIndex
+	seq         uint64 // series id sequence
 	DesignateId bool
-	
 
 	compacting          bool
 	compactionLimiter   limiter.Fixed
@@ -62,6 +61,7 @@ func NewSeriesPartition(id int, path string, compactionLimiter limiter.Fixed) *S
 		CompactThreshold:  DefaultSeriesPartitionCompactThreshold,
 		Logger:            zap.NewNop(),
 		seq:               uint64(id) + 1,
+		// DesignateId:       true,
 	}
 }
 

@@ -32,20 +32,38 @@ type Index struct {
 	// mSketch, mTSketch estimator.Sketch // Measurement sketches, add, delete?
 	// sSketch, sTSketch estimator.Sketch // Series sketches
 
+	path string // Root directory of the index partitions.
+
 	fieldSet *tsdb.MeasurementFieldSet
 
 	// Index's version.
 	version int
 }
 
+// An IndexOption is a functional option for changing the configuration of
+// an Index.
+type IndexOption func(i *Index)
+// WithPath sets the root path of the Index
+var WithPath = func(path string) IndexOption {
+	return func(i *Index) {
+		i.path = path
+	}
+}
+
 // NewIndex returns a new instance of Index.
-func NewIndex(sfile *tsdb.SeriesFile, database string) *Index {
-	return &Index{
+func NewIndex(sfile *tsdb.SeriesFile, database string, options ...IndexOption) *Index {
+	idx := &Index{
 		logger:   zap.NewNop(),
 		version:  Version,
 		sfile:    sfile,
 		database: database,
 	}
+
+	for _, option := range options {
+		option(idx)
+	}
+
+	return idx
 }
 
 func (i *Index) Open() error {

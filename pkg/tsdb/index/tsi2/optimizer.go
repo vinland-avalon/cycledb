@@ -35,7 +35,7 @@ func (a *MultiplierOptimizer) NewOptimizedGrid(gi *GridIndex, tagPairSet []TagPa
 	tagValuess := make([]*TagValues, 0, len(tagPairSet))
 	for i := 0; i < len(tagPairSet); i++ {
 		n := gi.GetNumOfFilledUpGridForSingleTagKey(tagPairSet[i].TagKey)
-		tagValuess = append(tagValuess, newTagValues(PowInt(a.multiplier, n)*a.basicNum))
+		tagValuess = append(tagValuess, newTagValues(PowUint64(a.multiplier, n)*uint64(a.basicNum)))
 		tagValuess[i].SetValue(tagPairSet[i].TagValue)
 	}
 

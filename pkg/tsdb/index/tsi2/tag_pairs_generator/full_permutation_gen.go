@@ -42,7 +42,7 @@ func (g *FullPermutationGen) generateFullPermutationTagSets(tagKeyNum, tagValueN
 
 	currLayer := g.generateTagPairsForOneTagKey(tagKeyNum-1, tagValueNum, allowEmpty)
 	prevLayers := g.generateFullPermutationTagSets(tagKeyNum-1, tagValueNum, allowEmpty)
-	res := make([][]tsi2.TagPair, 0, tsi2.PowInt(tagValueNum, tagKeyNum))
+	res := make([][]tsi2.TagPair, 0, tsi2.PowUint64(tagValueNum, tagKeyNum))
 
 	for _, curr := range currLayer {
 		for _, prev := range prevLayers {

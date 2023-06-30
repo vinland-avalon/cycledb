@@ -6,8 +6,8 @@ import (
 	"github.com/influxdata/influxdb/v2/models"
 )
 
-func PowInt(x, y int) int {
-	return int(math.Pow(float64(x), float64(y)))
+func PowUint64(x, y int) uint64 {
+	return uint64(math.Pow(float64(x), float64(y)))
 }
 
 func IfTagPairsEqual(a, b []TagPair) bool {
@@ -27,24 +27,25 @@ func IfTagPairsEqual(a, b []TagPair) bool {
 }
 
 // VariableBaseConvert: dimension: [[value,capacity]], if value==all, value==-1
-func VariableBaseConvert(dimensions [][]int, idx int, previous []uint64) []uint64 {
-	if idx == len(dimensions) {
+func VariableBaseConvert(indexes []int, capacities []uint64, idx int, previous []uint64) []uint64 {
+	if idx == len(indexes) {
 		return previous
 	}
-	d := dimensions[idx]
-	if d[0] != -1 {
+	index := indexes[idx]
+	capacity := capacities[idx]
+	if index != -1 {
 		for i := range previous {
-			previous[i] = previous[i]*uint64(d[1]) + uint64(d[0])
+			previous[i] = previous[i]*capacity + uint64(index)
 		}
-		return VariableBaseConvert(dimensions, idx+1, previous)
+		return VariableBaseConvert(indexes, capacities, idx+1, previous)
 	} else {
-		curr := make([]uint64, 0, len(previous)*d[1])
-		for i := 0; i < d[1]; i++ {
+		curr := make([]uint64, 0, uint64(len(previous))*capacity)
+		for i := uint64(0); i < capacity; i++ {
 			for j := range previous {
-				curr = append(curr, previous[j]*uint64(d[1])+uint64(i))
+				curr = append(curr, previous[j]*capacity+i)
 			}
 		}
-		return VariableBaseConvert(dimensions, idx+1, curr)
+		return VariableBaseConvert(indexes, capacities, idx+1, curr)
 	}
 }
 

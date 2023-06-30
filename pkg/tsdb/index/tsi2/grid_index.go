@@ -45,7 +45,7 @@ func (gi *GridIndex) GetSeriesIDsWithTagPairSet(tagPairSet []TagPair) *tsdb.Seri
 // return -1 if not exist
 func (gi *GridIndex) GetStrictlyMatchedSeriesIDForTagPairSet(tagPairSet []TagPair) (uint64, bool) {
 	for _, grid := range gi.grids {
-		id, ok := grid.GetStrictlyMatchedIDForTagPairSet(tagPairSet)
+		id, ok := grid.GetStrictlyMatchedIDForTagPairSetWithoutIDSet(tagPairSet)
 		if ok {
 			return id, true
 		}
@@ -85,9 +85,9 @@ func (gi *GridIndex) SetTagPairSet(tagPairSet []TagPair) (uint64, bool) {
 
 func (gi *GridIndex) HasTagKey(key string) bool {
 	gi.mu.RLock()
+	defer gi.mu.RUnlock()
 	for _, grid := range gi.grids {
 		if _, ok := grid.tagKeyToIndex[key]; ok {
-			gi.mu.RUnlock()
 			return true
 		}
 	}
@@ -96,6 +96,7 @@ func (gi *GridIndex) HasTagKey(key string) bool {
 
 func (gi *GridIndex) HasTagValue(key, value string) bool {
 	gi.mu.RLock()
+	defer gi.mu.Unlock()
 	for _, grid := range gi.grids {
 		if index, ok := grid.tagKeyToIndex[key]; ok {
 			if _, ok := grid.tagValuess[index].valueToIndex[value]; ok {
@@ -155,6 +156,8 @@ func (gi *GridIndex) NewTagValueIterator(key string) *TagValueIterator {
 }
 
 func (gi *GridIndex) SeriesIDSet() *tsdb.SeriesIDSet {
+	gi.mu.RLock()
+	defer gi.mu.Unlock()
 	idsSet := tsdb.NewSeriesIDSet()
 	for _, g := range gi.grids {
 		idsSet.MergeInPlace(g.GetSeriesIDsWithTagPairSet([]TagPair{}))
@@ -163,6 +166,8 @@ func (gi *GridIndex) SeriesIDSet() *tsdb.SeriesIDSet {
 }
 
 func (gi *GridIndex) SeriesIDSetWithTagKey(key string) *tsdb.SeriesIDSet {
+	gi.mu.RLock()
+	defer gi.mu.Unlock()
 	idsSet := tsdb.NewSeriesIDSet()
 	for _, g := range gi.grids {
 		if g.HasTagKey(key) {
@@ -173,6 +178,8 @@ func (gi *GridIndex) SeriesIDSetWithTagKey(key string) *tsdb.SeriesIDSet {
 }
 
 func (gi *GridIndex) SeriesIDSetWithTagValue(key, value string) *tsdb.SeriesIDSet {
+	gi.mu.RLock()
+	defer gi.mu.Unlock()
 	idsSet := tsdb.NewSeriesIDSet()
 	for _, g := range gi.grids {
 		if g.HasTagValue(key, value) {
