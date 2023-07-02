@@ -42,6 +42,9 @@ type SeriesFile struct {
 	refs sync.RWMutex // RWMutex to track references to the SeriesFile that are in use.
 
 	Logger *zap.Logger
+
+	// when insert series, wheather map to passed ids or create one
+	DesignateId bool
 }
 
 // NewSeriesFile returns a new instance of SeriesFile.
@@ -55,6 +58,21 @@ func NewSeriesFile(path string) *SeriesFile {
 		path:                   path,
 		maxSnapshotConcurrency: maxSnapshotConcurrency,
 		Logger:                 zap.NewNop(),
+	}
+}
+
+// NewSeriesFileWithDesignatedIDS returns a new instance of SeriesFile.
+func NewSeriesFileWithDesignatedIDS(path string) *SeriesFile {
+	maxSnapshotConcurrency := runtime.GOMAXPROCS(0)
+	if maxSnapshotConcurrency < 1 {
+		maxSnapshotConcurrency = 1
+	}
+
+	return &SeriesFile{
+		path:                   path,
+		maxSnapshotConcurrency: maxSnapshotConcurrency,
+		Logger:                 zap.NewNop(),
+		DesignateId:            true,
 	}
 }
 
@@ -86,7 +104,7 @@ func (f *SeriesFile) Open() error {
 	// Open partitions.
 	f.partitions = make([]*SeriesPartition, 0, SeriesFilePartitionN)
 	for i := 0; i < SeriesFilePartitionN; i++ {
-		p := NewSeriesPartition(i, f.SeriesPartitionPath(i), compactionLimiter)
+		p := NewSeriesPartition(i, f.SeriesPartitionPath(i), compactionLimiter, f.DesignateId)
 		p.Logger = f.Logger.With(zap.Int("partition", p.ID()))
 		if err := p.Open(); err != nil {
 			f.Logger.Error("Unable to open series file",

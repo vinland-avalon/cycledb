@@ -52,7 +52,7 @@ type SeriesPartition struct {
 }
 
 // NewSeriesPartition returns a new instance of SeriesPartition.
-func NewSeriesPartition(id int, path string, compactionLimiter limiter.Fixed) *SeriesPartition {
+func NewSeriesPartition(id int, path string, compactionLimiter limiter.Fixed, DesignatedId bool) *SeriesPartition {
 	return &SeriesPartition{
 		id:                id,
 		path:              path,
@@ -61,7 +61,7 @@ func NewSeriesPartition(id int, path string, compactionLimiter limiter.Fixed) *S
 		CompactThreshold:  DefaultSeriesPartitionCompactThreshold,
 		Logger:            zap.NewNop(),
 		seq:               uint64(id) + 1,
-		// DesignateId:       true,
+		DesignateId:       DesignatedId,
 	}
 }
 

@@ -165,11 +165,11 @@ func (i *Index) CreateSeriesListIfNotExists(keys, names [][]byte, tagsSlice []mo
 
 	// todo(vinland): drop the checks for production env
 	if len(ids) != len(newIDs) {
-		return fmt.Errorf("CreateSeriesListIfNotExist: ids in grid index is not same as ids in series file, %d to %d", len(ids), len(newIDs))
+		return fmt.Errorf("CreateSeriesListIfNotExist: ids in grid index is not same as ids in series file, len of %d to %d", len(ids), len(newIDs))
 	}
 	for i, id := range newIDs {
 		if id != ids[i] {
-			return fmt.Errorf("CreateSeriesListIfNotExist: ids in grid index is not same as ids in series file, %d to %d at %d", id, ids[i], i)
+			return fmt.Errorf("CreateSeriesListIfNotExist: ids in grid index is not same as ids in series file, %v to %v", newIDs, ids)
 		}
 	}
 	return nil

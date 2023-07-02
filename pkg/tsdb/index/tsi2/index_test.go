@@ -1,7 +1,8 @@
 package tsi2_test
 
 import (
-	// "reflect"
+	"reflect"
+	"sort"
 	"testing"
 
 	"cycledb/pkg/tsdb"
@@ -25,6 +26,9 @@ type Index struct {
 // MustOpenIndex returns a new, open index. Panic on error.
 func MustOpenIndex(tb testing.TB) *Index {
 	idx := NewIndex(tb)
+	if err := idx.SeriesFile.Open(); err != nil {
+		panic(err)
+	}
 	if err := idx.Open(); err != nil {
 		panic(err)
 	}
@@ -40,7 +44,7 @@ func NewIndex(tb testing.TB) *Index {
 
 // NewSeriesFile returns a new instance of SeriesFile with a temporary file path.
 func NewSeriesFile(tb testing.TB) *SeriesFile {
-	return &SeriesFile{SeriesFile: tsdb.NewSeriesFile(tb.TempDir())}
+	return &SeriesFile{SeriesFile: tsdb.NewSeriesFileWithDesignatedIDS(tb.TempDir())}
 }
 
 func TestInterface(t *testing.T) {
@@ -132,53 +136,55 @@ func curryState(state int, f func(t *testing.T, state int)) func(t *testing.T) {
 
 // Ensure index can iterate over all measurement names.
 func TestIndex_ForEachMeasurementName(t *testing.T) {
-	// idx := MustOpenIndex(t)
-	// defer idx.Close()
+	idx := MustOpenIndex(t)
+	defer idx.Close()
+	// Add series to index.
+	if err := idx.CreateSeriesSliceIfNotExists([]Series{
+		{Name: []byte("cpu"), Tags: models.NewTags(map[string]string{"region": "east"})},
+		{Name: []byte("cpu"), Tags: models.NewTags(map[string]string{"region": "west"})},
+		{Name: []byte("mem"), Tags: models.NewTags(map[string]string{"region": "east"})},
+	}); err != nil {
+		t.Fatal(err)
+	}
 
-	// // Add series to index.
-	// if err := idx.CreateSeriesSliceIfNotExists([]Series{
-	// 	{Name: []byte("cpu"), Tags: models.NewTags(map[string]string{"region": "east"})},
-	// 	{Name: []byte("cpu"), Tags: models.NewTags(map[string]string{"region": "west"})},
-	// 	{Name: []byte("mem"), Tags: models.NewTags(map[string]string{"region": "east"})},
-	// }); err != nil {
-	// 	t.Fatal(err)
-	// }
+	// Verify measurements are returned.
+	idx.Run(t, func(t *testing.T) {
+		var names []string
+		if err := idx.ForEachMeasurementName(func(name []byte) error {
+			names = append(names, string(name))
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
 
-	// // Verify measurements are returned.
-	// idx.Run(t, func(t *testing.T) {
-	// 	var names []string
-	// 	if err := idx.ForEachMeasurementName(func(name []byte) error {
-	// 		names = append(names, string(name))
-	// 		return nil
-	// 	}); err != nil {
-	// 		t.Fatal(err)
-	// 	}
+		if !reflect.DeepEqual(names, []string{"cpu", "mem"}) {
+			t.Fatalf("unexpected names: %#v", names)
+		}
+	})
 
-	// 	if !reflect.DeepEqual(names, []string{"cpu", "mem"}) {
-	// 		t.Fatalf("unexpected names: %#v", names)
-	// 	}
-	// })
+	// Add more series.
+	if err := idx.CreateSeriesSliceIfNotExists([]Series{
+		{Name: []byte("disk")},
+		{Name: []byte("mem")},
+	}); err != nil {
+		t.Fatal(err)
+	}
 
-	// // Add more series.
-	// if err := idx.CreateSeriesSliceIfNotExists([]Series{
-	// 	{Name: []byte("disk")},
-	// 	{Name: []byte("mem")},
-	// }); err != nil {
-	// 	t.Fatal(err)
-	// }
+	// Verify new measurements.
+	idx.Run(t, func(t *testing.T) {
+		var names []string
+		if err := idx.ForEachMeasurementName(func(name []byte) error {
+			names = append(names, string(name))
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
 
-	// // Verify new measurements.
-	// idx.Run(t, func(t *testing.T) {
-	// 	var names []string
-	// 	if err := idx.ForEachMeasurementName(func(name []byte) error {
-	// 		names = append(names, string(name))
-	// 		return nil
-	// 	}); err != nil {
-	// 		t.Fatal(err)
-	// 	}
+		// todo(vinland): check if it is necessary to return names in order
+		sort.Strings(names)
 
-	// 	if !reflect.DeepEqual(names, []string{"cpu", "disk", "mem"}) {
-	// 		t.Fatalf("unexpected names: %#v", names)
-	// 	}
-	// })
+		if !reflect.DeepEqual(names, []string{"cpu", "disk", "mem"}) {
+			t.Fatalf("unexpected names: %#v", names)
+		}
+	})
 }
