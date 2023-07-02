@@ -37,10 +37,10 @@ type SeriesPartition struct {
 	closing chan struct{}
 	once    sync.Once
 
-	segments    []*SeriesSegment
-	index       *SeriesIndex
-	seq         uint64 // series id sequence
-	DesignateId bool
+	segments []*SeriesSegment
+	index    *SeriesIndex
+	seq      uint64 // series id sequence
+	// DesignateId bool
 
 	compacting          bool
 	compactionLimiter   limiter.Fixed
@@ -52,7 +52,7 @@ type SeriesPartition struct {
 }
 
 // NewSeriesPartition returns a new instance of SeriesPartition.
-func NewSeriesPartition(id int, path string, compactionLimiter limiter.Fixed, DesignatedId bool) *SeriesPartition {
+func NewSeriesPartition(id int, path string, compactionLimiter limiter.Fixed) *SeriesPartition {
 	return &SeriesPartition{
 		id:                id,
 		path:              path,
@@ -61,7 +61,7 @@ func NewSeriesPartition(id int, path string, compactionLimiter limiter.Fixed, De
 		CompactThreshold:  DefaultSeriesPartitionCompactThreshold,
 		Logger:            zap.NewNop(),
 		seq:               uint64(id) + 1,
-		DesignateId:       DesignatedId,
+		// DesignateId:       DesignatedId,
 	}
 }
 
@@ -241,9 +241,9 @@ func (p *SeriesPartition) CreateSeriesListIfNotExists(keys [][]byte, keyPartitio
 	// Track offsets of duplicate series.
 	newIDs := make(map[string]uint64, len(ids))
 
-	if p.DesignateId && len(wantedIds) != len(keys) {
-		return ErrSeriesPartitionDesignatedIdsDismatch
-	}
+	// if p.DesignateId && len(wantedIds) != len(keys) {
+	// 	return ErrSeriesPartitionDesignatedIdsDismatch
+	// }
 
 	for i := range keys {
 		// Skip series that don't belong to the partition or have already been created.
@@ -263,16 +263,21 @@ func (p *SeriesPartition) CreateSeriesListIfNotExists(keys [][]byte, keyPartitio
 		var id uint64
 		var offset int64
 		var err error
-		if p.DesignateId {
-			id, offset, err = p.insertWithId(key, wantedIds[i])
-			if err != nil {
-				return err
-			}
-		} else {
-			id, offset, err = p.insert(key)
-			if err != nil {
-				return err
-			}
+		// if p.DesignateId {
+		// 	id, offset, err = p.insertWithId(key, wantedIds[i])
+		// 	// fmt.Printf("insertWithId, returns %d, %d for %v, %d\n", id, offset, string(key), wantedIds[i])
+		// 	if err != nil {
+		// 		return err
+		// 	}
+		// } else {
+		// 	id, offset, err = p.insert(key)
+		// 	if err != nil {
+		// 		return err
+		// 	}
+		// }
+		id, offset, err = p.insert(key)
+		if err != nil {
+			return err
 		}
 		// Append new key to be added to hash map after flush.
 		ids[i] = id

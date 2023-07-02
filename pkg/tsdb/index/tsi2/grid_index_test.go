@@ -18,10 +18,10 @@ func TestInitAndGetSeriesID(t *testing.T) {
 	// first series
 	id, ok := gi.SetTagPairSet(GetTagPairsExample("0"))
 	assert.True(t, ok)
-	assert.True(t, id == 0)
+	assert.True(t, id == 1)
 	// insert the same series twice, should return false and 0
 	id, ok = gi.SetTagPairSet(GetTagPairsExample("0"))
-	assert.True(t, id == 0)
+	assert.True(t, id == 1)
 	assert.True(t, !ok)
 	// println(idSet.Cardinality())
 	// idSet.ForEach(func (id uint64) {
@@ -29,19 +29,19 @@ func TestInitAndGetSeriesID(t *testing.T) {
 	// })
 	// insert the second series
 	id, ok = gi.SetTagPairSet(GetTagPairsExample("1"))
-	assert.Equal(t, uint64(1111), id)
+	assert.Equal(t, uint64(1112), id)
 	assert.True(t, ok)
 	// insert the same series twice, should return false and 1111
 	id, ok = gi.SetTagPairSet(GetTagPairsExample("1"))
-	assert.Equal(t, uint64(1111), id)
+	assert.Equal(t, uint64(1112), id)
 	assert.True(t, !ok)
 	// get ids of tag pairs (specific)
 	idSet := gi.GetSeriesIDsWithTagPairSet(GetTagPairsExample("0"))
-	assert.True(t, idSet.Contains(0))
+	assert.True(t, idSet.Contains(1))
 	idSet = gi.GetSeriesIDsWithTagPairSet(GetTagPairsExample("1"))
-	assert.True(t, idSet.Contains(1111))
+	assert.True(t, idSet.Contains(1112))
 	idSet = gi.GetSeriesIDsWithTagPairSet(GetTagPairsExample("2"))
-	assert.True(t, !idSet.Contains(1111))
+	assert.True(t, !idSet.Contains(1112))
 
 	// get ids of tag pairs (multiple ids)
 	tagPairSet := GetTagPairsExample("2")
@@ -49,7 +49,7 @@ func TestInitAndGetSeriesID(t *testing.T) {
 	// similar to previous one: [a, 01][b, 11][c, 21][d, 31] for c
 	tagPairSet[2].TagValue = "21"
 	id, ok = gi.SetTagPairSet(tagPairSet)
-	assert.Equal(t, id, uint64(2212))
+	assert.Equal(t, id, uint64(2213))
 	assert.True(t, ok)
 	// when looking up with {c, 21}, should return multiple ids
 	idSet = gi.GetSeriesIDsWithTagPairSet([]tsi2.TagPair{
@@ -59,7 +59,7 @@ func TestInitAndGetSeriesID(t *testing.T) {
 		},
 	})
 	assert.Equal(t, uint64(2), idSet.Cardinality())
-	for _, id := range []uint64{2212, 1111} {
+	for _, id := range []uint64{2213, 1112} {
 		assert.True(t, idSet.Contains(id))
 	}
 }
@@ -73,13 +73,13 @@ func TestMultiGrid(t *testing.T) {
 	wanted := []uint64{0, 3, 4, 7, 8, 12, 19}
 	for i, tagPairSet := range tagPairSets {
 		id, ok := gi.SetTagPairSet(tagPairSet)
-		assert.Equal(t, wanted[i], id)
+		assert.Equal(t, wanted[i]+1, id)
 		assert.True(t, ok)
 	}
 
 	for i, tagPairs := range tagPairSets {
 		ids := gi.GetSeriesIDsWithTagPairSet(tagPairs)
-		assert.True(t, ids.Contains(wanted[i]))
+		assert.True(t, ids.Contains(wanted[i]+1))
 	}
 }
 
@@ -100,13 +100,13 @@ func TestMultiGridWithMultiplier(t *testing.T) {
 	wanted := []uint64{0, 3, 4, 9, 14, 20, 31}
 	for i, tagPairSet := range tagPairSets {
 		id, ok := gi.SetTagPairSet(tagPairSet)
-		assert.Equal(t, wanted[i], id)
+		assert.Equal(t, wanted[i]+1, id)
 		assert.True(t, ok)
 	}
 
 	for i, tagPairSet := range tagPairSets {
 		ids := gi.GetSeriesIDsWithTagPairSet(tagPairSet)
-		assert.True(t, ids.Contains(wanted[i]))
+		assert.True(t, ids.Contains(wanted[i]+1))
 	}
 }
 

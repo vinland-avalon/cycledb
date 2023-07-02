@@ -25,7 +25,8 @@ func NewMultiplierOptimizer(basicNum, multiplier int) *MultiplierOptimizer {
 }
 
 func (a *MultiplierOptimizer) NewOptimizedGrid(gi *GridIndex, tagPairSet []TagPair) *Grid {
-	offset := uint64(0)
+	// so that the id begins at 1, not 0
+	offset := uint64(1)
 	if len(gi.grids) != 0 {
 		lastGrid := gi.grids[len(gi.grids)-1]
 		lastGridLength := lastGrid.getCapacityOfIDs()

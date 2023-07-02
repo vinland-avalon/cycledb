@@ -1,6 +1,8 @@
 package tsi2
 
-import "cycledb/pkg/tsdb"
+import (
+	"cycledb/pkg/tsdb"
+)
 
 type Grid struct {
 	// the grids are linked, so id should skip

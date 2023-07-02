@@ -179,12 +179,15 @@ func (gi *GridIndex) SeriesIDSetWithTagKey(key string) *tsdb.SeriesIDSet {
 
 func (gi *GridIndex) SeriesIDSetWithTagValue(key, value string) *tsdb.SeriesIDSet {
 	gi.mu.RLock()
-	defer gi.mu.Unlock()
+	defer gi.mu.RUnlock()
 	idsSet := tsdb.NewSeriesIDSet()
 	for _, g := range gi.grids {
 		if g.HasTagValue(key, value) {
 			idsSet.MergeInPlace(g.GetSeriesIDsWithTagPairSet([]TagPair{{TagKey: key, TagValue: value}}))
 		}
 	}
+	// idsSet.ForEach(func (id uint64) {
+	// 	fmt.Printf("SeriesIDSetWithTagValue returns idSet containing %d\n", id)
+	// })
 	return idsSet
 }
