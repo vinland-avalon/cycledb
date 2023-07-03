@@ -3,35 +3,33 @@ package generator
 import (
 	"fmt"
 
-	"cycledb/pkg/tsdb/index/tsi2"
+	"github.com/influxdata/influxdb/v2/models"
 )
 
 type DiagonalGenerator struct{}
 
-func (g *DiagonalGenerator) GenerateInsertTagPairSets(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
-	return GetDiagonalTagPairSetss(tagKeyNum, tagValueNum)
+func (g *DiagonalGenerator) GenerateInsertTagsSlice(tagKeyNum, tagValueNum int) []models.Tags {
+	return GetDiagonalTagsSlice(tagKeyNum, tagValueNum)
 }
-func (g *DiagonalGenerator) GenerateQueryTagPairSets(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
+func (g *DiagonalGenerator) GenerateQueryTagsSlice(tagKeyNum, tagValueNum int) []models.Tags {
 	fpGen := FullPermutationGen{}
-	return fpGen.GenerateQueryTagPairSets(tagKeyNum, tagValueNum)
+	return fpGen.GenerateQueryTagsSlice(tagKeyNum, tagValueNum)
 }
 
-// GetDiagonalTagPairSetss: return many tag pair sets.
+// GetDiagonalTagsSlices: return many tag pair sets.
 // For example, tagKeyNum = 2, tagValueNum = 5, then return
 // [[{a 0} {b 0}] [{a 1} {b 1}] [{a 2} {b 2}] [{a 3} {b 3}] [{a 4} {b 4}]].
 // Another example, tagKeyNum = 2, tagValueNum = 5, then return
 // [[{a 0} {b 0} {c 0}] [{a 1} {b 1} {c 1}]]
-func GetDiagonalTagPairSetss(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
-	tagPairSets := [][]tsi2.TagPair{}
+func GetDiagonalTagsSlice(tagKeyNum, tagValueNum int) []models.Tags {
+	tagsSlice := []models.Tags{}
 	for i := 0; i < tagValueNum; i++ {
-		tagPairSet := []tsi2.TagPair{}
+		m := map[string]string{}
 		for j := 0; j < tagKeyNum; j++ {
-			tagPairSet = append(tagPairSet, tsi2.TagPair{
-				TagKey:   fmt.Sprintf("%c", 'a'+j),
-				TagValue: fmt.Sprintf("%d", i),
-			})
+			m[fmt.Sprintf("%c", 'a'+j)] = fmt.Sprintf("%d", i)
 		}
-		tagPairSets = append(tagPairSets, tagPairSet)
+		tags := models.NewTags(m)
+		tagsSlice = append(tagsSlice, tags)
 	}
-	return tagPairSets
+	return tagsSlice
 }

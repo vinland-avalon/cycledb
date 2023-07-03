@@ -8,19 +8,19 @@ import (
 	"strings"
 	"time"
 
-	"cycledb/pkg/tsdb/index/tsi2"
+	"github.com/influxdata/influxdb/v2/models"
 )
 
 const RANDOM_GENERATOR_FILE_PATH = "./data/series_keys"
 
 type RandomGenerator struct{}
 
-func (g *RandomGenerator) GenerateInsertTagPairSets(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
+func (g *RandomGenerator) GenerateInsertTagsSlice(tagKeyNum, tagValueNum int) []models.Tags {
 	dataFile := g.getFilePath(tagKeyNum, tagValueNum)
 	// check or create data file
 	if _, err := os.Stat(dataFile); err != nil {
 		if os.IsNotExist(err) {
-			seriesKeys := g.generateRandomTagPairSets(tagKeyNum, tagValueNum)
+			seriesKeys := g.generateRandomtagsSlice(tagKeyNum, tagValueNum)
 			g.createAndWriteToFile(seriesKeys, dataFile)
 		} else {
 			fmt.Printf("[GenerateInsertTagPairs] fail to open file: %v, err: %+v\n", dataFile, err)
@@ -29,62 +29,62 @@ func (g *RandomGenerator) GenerateInsertTagPairSets(tagKeyNum, tagValueNum int) 
 	}
 
 	// read data file and construct series keys (tag pairs)
-	return g.readTagPairSetsFromFile(dataFile)
+	return g.readtagsSliceFromFile(dataFile)
 }
 
-func (g *RandomGenerator) GenerateQueryTagPairSets(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
+func (g *RandomGenerator) GenerateQueryTagsSlice(tagKeyNum, tagValueNum int) []models.Tags {
 	// generate original tag pairs
 	FPGen := FullPermutationGen{}
-	return FPGen.GenerateQueryTagPairSets(tagKeyNum, tagValueNum)
+	return FPGen.GenerateQueryTagsSlice(tagKeyNum, tagValueNum)
 }
 
-func (g *RandomGenerator) generateRandomTagPairSets(tagKeyNum, tagValueNum int) []string {
+func (g *RandomGenerator) generateRandomtagsSlice(tagKeyNum, tagValueNum int) []string {
 	// generate original tag pairs
 	FPGen := FullPermutationGen{}
-	orginalTagPairSets := FPGen.GenerateQueryTagPairSets(tagKeyNum, tagValueNum)
+	originalTagsSlice := FPGen.GenerateQueryTagsSlice(tagKeyNum, tagValueNum)
 
 	// delete partially and repeat partially from the orginal tag pairs, 3 * 50% = 1.5
-	tagPairSets := [][]tsi2.TagPair{}
+	tagsSlice := []models.Tags{}
 	for i := 0; i < 3; i++ {
-		for _, tagPairSet := range orginalTagPairSets {
+		for _, tags := range originalTagsSlice {
 			// choose 50% tag pairs randomly
 			rand.Seed(time.Now().UnixNano())
 			choose := rand.Intn(2)
 			if choose == 1 {
-				tagPairSets = append(tagPairSets, tagPairSet)
+				tagsSlice = append(tagsSlice, tags)
 			}
 		}
 	}
 	// shuffle
 	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(tagPairSets), func(i, j int) {
-		tagPairSets[i], tagPairSets[j] = tagPairSets[j], tagPairSets[i]
+	rand.Shuffle(len(tagsSlice), func(i, j int) {
+		tagsSlice[i], tagsSlice[j] = tagsSlice[j], tagsSlice[i]
 	})
 
 	// serialize to []string
-	tagPairSetsStrings := []string{}
-	for _, tagPairSet := range tagPairSets {
-		tagPairSetString := ""
-		for _, tagPair := range tagPairSet {
-			tagPairSetString += fmt.Sprintf("%s\t%s\t", tagPair.TagKey, tagPair.TagValue)
+	tagsSliceStrings := []string{}
+	for _, tags := range tagsSlice {
+		tagsSlicetring := ""
+		for _, tag := range tags {
+			tagsSlicetring += fmt.Sprintf("%s\t%s\t", tag.Key, tag.Value)
 		}
-		tagPairSetsStrings = append(tagPairSetsStrings, tagPairSetString)
+		tagsSliceStrings = append(tagsSliceStrings, tagsSlicetring)
 	}
-	return tagPairSetsStrings
+	return tagsSliceStrings
 }
 
 func (g *RandomGenerator) getFilePath(tagKeyNum, tagValueNumm int) string {
 	return fmt.Sprintf("%s_%d_%d", RANDOM_GENERATOR_FILE_PATH, tagKeyNum, tagValueNumm)
 }
 
-func (g *RandomGenerator) createAndWriteToFile(tagPairSets []string, filePath string) error {
+func (g *RandomGenerator) createAndWriteToFile(tagsSlice []string, filePath string) error {
 	f, err := os.Create(filePath)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	for _, line := range tagPairSets {
+	for _, line := range tagsSlice {
 		_, err := f.WriteString(line + "\n")
 		if err != nil {
 			return err
@@ -93,29 +93,29 @@ func (g *RandomGenerator) createAndWriteToFile(tagPairSets []string, filePath st
 	return nil
 }
 
-func (g *RandomGenerator) readTagPairSetsFromFile(filePath string) [][]tsi2.TagPair {
+func (g *RandomGenerator) readtagsSliceFromFile(filePath string) []models.Tags {
 	f, _ := os.Open(filePath)
 	defer f.Close()
 
 	fileScanner := bufio.NewScanner(f)
 	fileScanner.Split(bufio.ScanLines)
 
-	tagPairSets := [][]tsi2.TagPair{}
+	tagsSlice := []models.Tags{}
 
 	for fileScanner.Scan() {
-		tagPairSets = append(tagPairSets, convertToTagPairs(fileScanner.Text()))
+		tagsSlice = append(tagsSlice, convertToTagPairs(fileScanner.Text()))
 	}
-	return tagPairSets
+	return tagsSlice
 }
 
-func convertToTagPairs(line string) []tsi2.TagPair {
+func convertToTagPairs(line string) models.Tags {
 	// delete `\t` and `\n` at back
 	// TODO(vinland-avalon): error handle
 	line = line[:len(line)-1]
 	elems := strings.Split(line, "\t")
-	tagPairSet := []tsi2.TagPair{}
+	m := map[string]string{}
 	for i := 0; i < len(elems); i += 2 {
-		tagPairSet = append(tagPairSet, tsi2.TagPair{TagKey: elems[i], TagValue: elems[i+1]})
+		m[elems[i]] = elems[i+1]
 	}
-	return tagPairSet
+	return models.NewTags(m)
 }

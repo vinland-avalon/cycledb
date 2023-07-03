@@ -2,28 +2,10 @@ package tsi2
 
 import (
 	"math"
-
-	"github.com/influxdata/influxdb/v2/models"
 )
 
 func PowUint64(x, y int) uint64 {
 	return uint64(math.Pow(float64(x), float64(y)))
-}
-
-func IfTagPairsEqual(a, b []TagPair) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	aMap := map[string]string{}
-	for _, tagPair := range a {
-		aMap[tagPair.TagKey] = tagPair.TagValue
-	}
-	for _, tagPair := range b {
-		if v, ok := aMap[tagPair.TagKey]; !ok || v != tagPair.TagValue {
-			return false
-		}
-	}
-	return true
 }
 
 // VariableBaseConvert: dimension: [[value,capacity]], if value==all, value==-1
@@ -47,22 +29,6 @@ func VariableBaseConvert(indexes []int, capacities []uint64, idx int, previous [
 		}
 		return VariableBaseConvert(indexes, capacities, idx+1, curr)
 	}
-}
-
-// func tagsConvert(tags []TagPair) (models.Tags){
-// 	m := map[string]string{}
-// 	for _, tag := range tags {
-// 		m[tag.TagKey]=tag.TagValue
-// 	}
-// 	return models.NewTags(m)
-// }
-
-func tagsConvert(tags models.Tags) []TagPair {
-	res := make([]TagPair, 0, tags.Len())
-	for _, tag := range tags {
-		res = append(res, TagPair{TagKey: string(tag.Key), TagValue: string(tag.Value)})
-	}
-	return res
 }
 
 // unionStringSets returns the union of two sets

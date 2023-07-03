@@ -199,7 +199,7 @@ func (p *SeriesPartition) FileSize() (n int64, err error) {
 
 // CreateSeriesListIfNotExists creates a list of series in bulk if they don't exist.
 // The ids parameter is modified to contain series IDs for all keys belonging to this partition.
-func (p *SeriesPartition) CreateSeriesListIfNotExists(keys [][]byte, keyPartitionIDs []int, ids []uint64, wantedIds []uint64) error {
+func (p *SeriesPartition) CreateSeriesListIfNotExists(keys [][]byte, keyPartitionIDs []int, ids []uint64) error {
 	var writeRequired bool
 	p.mu.RLock()
 	if p.closed {
@@ -475,13 +475,13 @@ func (p *SeriesPartition) insert(key []byte) (id uint64, offset int64, err error
 	return id, offset, nil
 }
 
-func (p *SeriesPartition) insertWithId(key []byte, wantedId uint64) (id uint64, offset int64, err error) {
-	offset, err = p.writeLogEntry(AppendSeriesEntry(nil, SeriesEntryInsertFlag, wantedId, key))
-	if err != nil {
-		return 0, 0, err
-	}
-	return wantedId, offset, nil
-}
+// func (p *SeriesPartition) insertWithId(key []byte, wantedId uint64) (id uint64, offset int64, err error) {
+// 	offset, err = p.writeLogEntry(AppendSeriesEntry(nil, SeriesEntryInsertFlag, wantedId, key))
+// 	if err != nil {
+// 		return 0, 0, err
+// 	}
+// 	return wantedId, offset, nil
+// }
 
 // writeLogEntry appends an entry to the end of the active segment.
 // If there is no more room in the segment then a new segment is added.

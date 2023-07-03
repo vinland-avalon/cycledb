@@ -133,7 +133,7 @@ func (i *Index) DropMeasurement(name []byte) error {
 }
 
 func (i *Index) ForEachMeasurementName(fn func(name []byte) error) error {
-	for m, _ := range i.measurements.measurementId {
+	for m := range i.measurements.measurementId {
 		if err := fn([]byte(m)); err != nil {
 			return err
 		}
@@ -165,7 +165,7 @@ func (i *Index) CreateSeriesListIfNotExists(keys, names [][]byte, tagsSlice []mo
 				i.measurements.AppendMeasurement(names[index])
 			}
 			// todo(vinland): use model.tags for set function directly
-			id, success := i.measurements.SetTagPairSet(names[index], tagsSlice[index])
+			id, success := i.measurements.SetTags(names[index], tagsSlice[index])
 			if !success {
 				continue
 			}
@@ -176,7 +176,7 @@ func (i *Index) CreateSeriesListIfNotExists(keys, names [][]byte, tagsSlice []mo
 	}
 
 	// 3. add to seriesFile
-	ids, err := i.sfile.CreateSeriesListIfNotExists(newNames, newTagsSlice, []uint64{})
+	ids, err := i.sfile.CreateSeriesListIfNotExists(newNames, newTagsSlice)
 	if err != nil {
 		return err
 	}

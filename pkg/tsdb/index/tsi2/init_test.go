@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"cycledb/pkg/tsdb/index/tsi2"
 	generator "cycledb/pkg/tsdb/index/tsi2/tag_pairs_generator"
+
+	"github.com/influxdata/influxdb/v2/models"
 )
 
 var (
@@ -43,30 +44,18 @@ func init() {
 	gen = generators[genID]
 }
 
-func GetTagPairsExample(suffix string) []tsi2.TagPair {
-	tagPairs := []tsi2.TagPair{
-		{
-			TagKey:   "a",
-			TagValue: "0" + suffix,
-		},
-		{
-			TagKey:   "b",
-			TagValue: "1" + suffix,
-		},
-		{
-			TagKey:   "c",
-			TagValue: "2" + suffix,
-		},
-		{
-			TagKey:   "d",
-			TagValue: "3" + suffix,
-		},
+func GetTagPairsExample(suffix string) models.Tags {
+	m := map[string]string{
+		"a": "0" + suffix,
+		"b": "1" + suffix,
+		"c": "2" + suffix,
+		"d": "3" + suffix,
 	}
-	return tagPairs
+	return models.NewTags(m)
 }
 
-func Contains(a, b []int64) bool {
-	m := map[int64]struct{}{}
+func Contains(a, b []uint64) bool {
+	m := map[uint64]struct{}{}
 	for _, v := range a {
 		m[v] = struct{}{}
 	}
@@ -91,11 +80,11 @@ func ContainsUint64(a, b []uint64) bool {
 	return true
 }
 
-func randomSelectTagPairSets(tagPairSets [][]tsi2.TagPair, queryNum int) [][]tsi2.TagPair {
-	selectedSets := [][]tsi2.TagPair{}
+func randomSelectTagPairSets(tagsSlice []models.Tags, queryNum int) []models.Tags {
+	selectedSets := []models.Tags{}
 	for i := 0; i < queryNum; i++ {
 		rand.Seed(time.Now().UnixNano())
-		selectedSets = append(selectedSets, tagPairSets[rand.Intn(len(tagPairSets))])
+		selectedSets = append(selectedSets, tagsSlice[rand.Intn(len(tagsSlice))])
 	}
 	return selectedSets
 }

@@ -251,7 +251,7 @@ func (i *Index) SeriesIDSet() *tsdb.SeriesIDSet {
 	return seriesIDSet
 }
 
-// Open opens the index.PartitionN
+// Open opens the index.
 func (i *Index) Open() (rErr error) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
@@ -676,7 +676,7 @@ func (i *Index) CreateSeriesListIfNotExists(keys [][]byte, names [][]byte, tagsS
 					return // No more work.
 				}
 
-				ids, err := i.partitions[idx].createSeriesListIfNotExists(pNames[idx], pTags[idx], []uint64{})
+				ids, err := i.partitions[idx].createSeriesListIfNotExists(pNames[idx], pTags[idx])
 
 				var updateCache bool
 				for _, id := range ids {
@@ -750,7 +750,7 @@ func (i *Index) CreateSeriesListIfNotExists(keys [][]byte, names [][]byte, tagsS
 
 // CreateSeriesIfNotExists creates a series if it doesn't exist or is deleted.
 func (i *Index) CreateSeriesIfNotExists(key, name []byte, tags models.Tags) error {
-	ids, err := i.partition(key).createSeriesListIfNotExists([][]byte{name}, []models.Tags{tags}, []uint64{})
+	ids, err := i.partition(key).createSeriesListIfNotExists([][]byte{name}, []models.Tags{tags})
 	if err != nil {
 		return err
 	}

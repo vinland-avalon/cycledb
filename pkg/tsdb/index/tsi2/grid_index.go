@@ -3,12 +3,9 @@ package tsi2
 import (
 	"cycledb/pkg/tsdb"
 	"sync"
-)
 
-type TagPair struct {
-	TagKey   string
-	TagValue string
-}
+	"github.com/influxdata/influxdb/v2/models"
+)
 
 type GridIndex struct {
 	grids     []*Grid
@@ -28,13 +25,13 @@ func (gi *GridIndex) WithAnalyzer(analyzer *MultiplierOptimizer) {
 	gi.optimizer = analyzer
 }
 
-// GetSeriesIDsWithTagPairSet:
-func (gi *GridIndex) GetSeriesIDsWithTagPairSet(tagPairSet []TagPair) *tsdb.SeriesIDSet {
+// GetSeriesIDsForTags:
+func (gi *GridIndex) GetSeriesIDsForTags(tags models.Tags) *tsdb.SeriesIDSet {
 	ids := tsdb.NewSeriesIDSet()
 	gi.mu.RLock()
 	defer gi.mu.RUnlock()
 	for _, grid := range gi.grids {
-		idsForGrid := grid.GetSeriesIDsWithTagPairSet(tagPairSet)
+		idsForGrid := grid.GetSeriesIDSetForTags(tags)
 		if idsForGrid != nil {
 			ids.MergeInPlace(idsForGrid)
 		}
@@ -42,10 +39,10 @@ func (gi *GridIndex) GetSeriesIDsWithTagPairSet(tagPairSet []TagPair) *tsdb.Seri
 	return ids
 }
 
-// return -1 if not exist
-func (gi *GridIndex) GetStrictlyMatchedSeriesIDForTagPairSet(tagPairSet []TagPair) (uint64, bool) {
+// GetStrictlyMatchedSeriesIDForTags: each dimension must match strictly, or return -1
+func (gi *GridIndex) GetStrictlyMatchedSeriesIDForTags(tags models.Tags) (uint64, bool) {
 	for _, grid := range gi.grids {
-		id, ok := grid.GetStrictlyMatchedIDForTagPairSetWithoutIDSet(tagPairSet)
+		id, ok := grid.GetStrictlyMatchedIDForTagsNoIDSet(tags)
 		if ok {
 			return id, true
 		}
@@ -53,11 +50,11 @@ func (gi *GridIndex) GetStrictlyMatchedSeriesIDForTagPairSet(tagPairSet []TagPai
 	return 0, false
 }
 
-// SetTagPairSet: (insert series keys, then) return corresponding id
-func (gi *GridIndex) SetTagPairSet(tagPairSet []TagPair) (uint64, bool) {
+// SetTags: (insert series keys, then) return corresponding id
+func (gi *GridIndex) SetTags(tags models.Tags) (uint64, bool) {
 	// 1. if tag pair sets already exist
 	gi.mu.RLock()
-	id, ok := gi.GetStrictlyMatchedSeriesIDForTagPairSet(tagPairSet)
+	id, ok := gi.GetStrictlyMatchedSeriesIDForTags(tags)
 	if ok {
 		gi.mu.RUnlock()
 		return id, false
@@ -68,19 +65,19 @@ func (gi *GridIndex) SetTagPairSet(tagPairSet []TagPair) (uint64, bool) {
 	// double check
 	gi.mu.Lock()
 	defer gi.mu.Unlock()
-	id, ok = gi.GetStrictlyMatchedSeriesIDForTagPairSet(tagPairSet)
+	id, ok = gi.GetStrictlyMatchedSeriesIDForTags(tags)
 	if ok {
 		return id, false
 	}
 
 	for _, grid := range gi.grids {
-		if id, ok = grid.SetTagPairSet(tagPairSet); ok {
+		if id, ok = grid.SetTags(tags); ok {
 			return id, true
 		}
 	}
 
 	// else create a new grid
-	return gi.initGridAndSetTagPairSet(tagPairSet)
+	return gi.initGridAndSetTags(tags)
 }
 
 func (gi *GridIndex) HasTagKey(key string) bool {
@@ -99,7 +96,7 @@ func (gi *GridIndex) HasTagValue(key, value string) bool {
 	defer gi.mu.Unlock()
 	for _, grid := range gi.grids {
 		if index, ok := grid.tagKeyToIndex[key]; ok {
-			if _, ok := grid.tagValuess[index].valueToIndex[value]; ok {
+			if _, ok := grid.tagValuesSlice[index].valueToIndex[value]; ok {
 				return true
 			}
 		}
@@ -107,8 +104,8 @@ func (gi *GridIndex) HasTagValue(key, value string) bool {
 	return false
 }
 
-func (gi *GridIndex) initGridAndSetTagPairSet(tagPairSet []TagPair) (uint64, bool) {
-	grid := gi.optimizer.NewOptimizedGrid(gi, tagPairSet)
+func (gi *GridIndex) initGridAndSetTags(tags models.Tags) (uint64, bool) {
+	grid := gi.optimizer.NewOptimizedGrid(gi, tags)
 	gi.grids = append(gi.grids, grid)
 	grid.seriesIDSet.Add(grid.offset)
 
@@ -144,7 +141,7 @@ func (gi *GridIndex) NewTagValueIterator(key string) *TagValueIterator {
 	res := map[string]struct{}{}
 	for _, g := range gi.grids {
 		if index, ok := g.tagKeyToIndex[key]; ok {
-			res = unionStringSets2(res, g.tagValuess[index].valueToIndex)
+			res = unionStringSets2(res, g.tagValuesSlice[index].valueToIndex)
 		}
 	}
 	gi.mu.RUnlock()
@@ -160,30 +157,34 @@ func (gi *GridIndex) SeriesIDSet() *tsdb.SeriesIDSet {
 	defer gi.mu.Unlock()
 	idsSet := tsdb.NewSeriesIDSet()
 	for _, g := range gi.grids {
-		idsSet.MergeInPlace(g.GetSeriesIDsWithTagPairSet([]TagPair{}))
+		idsSet.MergeInPlace(g.GetSeriesIDSetForTags(nil))
 	}
 	return idsSet
 }
 
-func (gi *GridIndex) SeriesIDSetWithTagKey(key string) *tsdb.SeriesIDSet {
+func (gi *GridIndex) SeriesIDSetForTagKey(key string) *tsdb.SeriesIDSet {
 	gi.mu.RLock()
 	defer gi.mu.Unlock()
 	idsSet := tsdb.NewSeriesIDSet()
 	for _, g := range gi.grids {
 		if g.HasTagKey(key) {
-			idsSet.MergeInPlace(g.GetSeriesIDsWithTagPairSet([]TagPair{}))
+			idsSet.MergeInPlace(g.GetSeriesIDSetForTags(nil))
 		}
 	}
 	return idsSet
 }
 
-func (gi *GridIndex) SeriesIDSetWithTagValue(key, value string) *tsdb.SeriesIDSet {
+func (gi *GridIndex) SeriesIDSetForTagValue(key, value string) *tsdb.SeriesIDSet {
 	gi.mu.RLock()
 	defer gi.mu.RUnlock()
 	idsSet := tsdb.NewSeriesIDSet()
 	for _, g := range gi.grids {
 		if g.HasTagValue(key, value) {
-			idsSet.MergeInPlace(g.GetSeriesIDsWithTagPairSet([]TagPair{{TagKey: key, TagValue: value}}))
+			idsSet.MergeInPlace(g.GetSeriesIDSetForTags(models.NewTags(
+				map[string]string{
+					key: value,
+				},
+			)))
 		}
 	}
 	// idsSet.ForEach(func (id uint64) {

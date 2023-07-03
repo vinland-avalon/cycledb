@@ -3,15 +3,18 @@ package tsi2
 import (
 	"cycledb/pkg/tsdb"
 	"sync"
+
+	"github.com/influxdata/influxdb/v2/models"
 )
 
 // for benchmark comparation
 type InvertIndex struct {
 	// tagKey -> tagValue -> series ids
-	invertIndex map[string]map[string]map[int64]struct{}
+	invertIndex map[string]map[string]map[uint64]struct{}
 	// id -> tag pairs
-	idToTagPairSet map[int64][]TagPair
-	idCnt          int64
+	idToTags map[uint64]models.Tags
+	// as increasing id, begin with 1, which means id begins at 1
+	idCnt uint64
 	// TODO(vinland-avalon): for high performance, improvements include:
 	// 1. partition
 	// 2. limit the zone that lock protects
@@ -22,39 +25,41 @@ type InvertIndex struct {
 
 func NewInvertIndex() *InvertIndex {
 	return &InvertIndex{
-		invertIndex:    map[string]map[string]map[int64]struct{}{},
-		idToTagPairSet: map[int64][]TagPair{},
-		idCnt:          0,
-		mu:             sync.RWMutex{},
-		seriesIDSet:    tsdb.NewSeriesIDSet(),
+		invertIndex: map[string]map[string]map[uint64]struct{}{},
+		idToTags:    map[uint64]models.Tags{},
+		idCnt:       1,
+		mu:          sync.RWMutex{},
+		seriesIDSet: tsdb.NewSeriesIDSet(),
 	}
 }
 
-func (ii *InvertIndex) GetSeriesIDsWithTagPairSet(tagPairSet []TagPair) []int64 {
+func (ii *InvertIndex) GetSeriesIDsWithTagPairSet(tags models.Tags) []uint64 {
 	ii.mu.RLock()
 	defer ii.mu.RUnlock()
 
-	return ii.getSeriesIDsWithTagPairSet(tagPairSet)
+	return ii.getSeriesIDsWithTagPairSet(tags)
 }
 
-func (ii *InvertIndex) getSeriesIDsWithTagPairSet(tagPairSet []TagPair) []int64 {
-	copyMapI64 := func(ids map[int64]struct{}) map[int64]struct{} {
-		m := map[int64]struct{}{}
+func (ii *InvertIndex) getSeriesIDsWithTagPairSet(tags models.Tags) []uint64 {
+	copyMapI64 := func(ids map[uint64]struct{}) map[uint64]struct{} {
+		m := map[uint64]struct{}{}
 		for id := range ids {
 			m[id] = struct{}{}
 		}
 		return m
 	}
 
-	ids := []int64{}
-	// TODO(vinland-avalon): not support non-condition search so far
-	if len(tagPairSet) == 0 {
-		return ids
+	ids := []uint64{}
+
+	if len(tags) == 0 {
+		ii.seriesIDSet.ForEach(func(id uint64) {
+			ids = append(ids, id)
+		})
 	}
 
-	idSet := copyMapI64(ii.getSeriesIDsForSingleTagPair(tagPairSet[0]))
-	for i := 1; i < len(tagPairSet); i++ {
-		currIdsSet := ii.getSeriesIDsForSingleTagPair(tagPairSet[i])
+	idSet := copyMapI64(ii.getSeriesIDsForSingleTagPair(tags[0]))
+	for i := 1; i < len(tags); i++ {
+		currIdsSet := ii.getSeriesIDsForSingleTagPair(tags[i])
 		for k := range idSet {
 			if _, ok := currIdsSet[k]; !ok {
 				delete(idSet, k)
@@ -68,14 +73,14 @@ func (ii *InvertIndex) getSeriesIDsWithTagPairSet(tagPairSet []TagPair) []int64 
 	return ids
 }
 
-func (ii *InvertIndex) getSeriesIDsForSingleTagPair(tagPair TagPair) map[int64]struct{} {
-	return ii.invertIndex[tagPair.TagKey][tagPair.TagValue]
+func (ii *InvertIndex) getSeriesIDsForSingleTagPair(tag models.Tag) map[uint64]struct{} {
+	return ii.invertIndex[string(tag.Key)][string(tag.Value)]
 }
 
-func (ii *InvertIndex) SetTagPairSet(tagPairSet []TagPair) (bool, int64) {
+func (ii *InvertIndex) SetTagPairSet(tags models.Tags) (bool, uint64) {
 	// check if the tagPairs already exists in index
 	ii.mu.RLock()
-	if idFound := ii.getStrictlyMatchedSeriesIDForTagPairs(tagPairSet); idFound != -1 {
+	if idFound := ii.getStrictlyMatchedSeriesIDForTagPairs(tags); idFound != 0 {
 		defer ii.mu.RUnlock()
 		return false, idFound
 	}
@@ -84,33 +89,33 @@ func (ii *InvertIndex) SetTagPairSet(tagPairSet []TagPair) (bool, int64) {
 	ii.mu.Lock()
 	defer ii.mu.Unlock()
 	// double check
-	if idFound := ii.getStrictlyMatchedSeriesIDForTagPairs(tagPairSet); idFound != -1 {
+	if idFound := ii.getStrictlyMatchedSeriesIDForTagPairs(tags); idFound != 0 {
 		return false, idFound
 	}
 	// do the insert
 	currId := ii.idCnt
-	for _, tagPair := range tagPairSet {
-		if _, ok := ii.invertIndex[tagPair.TagKey]; !ok {
-			ii.invertIndex[tagPair.TagKey] = map[string]map[int64]struct{}{}
+	for _, tag := range tags {
+		if _, ok := ii.invertIndex[string(tag.Key)]; !ok {
+			ii.invertIndex[string(tag.Key)] = map[string]map[uint64]struct{}{}
 		}
-		if _, ok := ii.invertIndex[tagPair.TagKey][tagPair.TagValue]; !ok {
-			ii.invertIndex[tagPair.TagKey][tagPair.TagValue] = map[int64]struct{}{}
+		if _, ok := ii.invertIndex[string(tag.Key)][string(tag.Value)]; !ok {
+			ii.invertIndex[string(tag.Key)][string(tag.Value)] = map[uint64]struct{}{}
 		}
-		ii.invertIndex[tagPair.TagKey][tagPair.TagValue][currId] = struct{}{}
+		ii.invertIndex[string(tag.Key)][string(tag.Value)][currId] = struct{}{}
 	}
 
-	ii.idToTagPairSet[currId] = tagPairSet
+	ii.idToTags[currId] = tags
 	ii.idCnt++
 	ii.seriesIDSet.Add(uint64(currId))
 	return true, currId
 }
 
-func (ii *InvertIndex) getStrictlyMatchedSeriesIDForTagPairs(tagPairs []TagPair) int64 {
-	ids := ii.getSeriesIDsWithTagPairSet(tagPairs)
+func (ii *InvertIndex) getStrictlyMatchedSeriesIDForTagPairs(tags models.Tags) uint64 {
+	ids := ii.getSeriesIDsWithTagPairSet(tags)
 	for _, id := range ids {
-		if IfTagPairsEqual(ii.idToTagPairSet[id], tagPairs) {
+		if ii.idToTags[id].Equal(tags) {
 			return id
 		}
 	}
-	return -1
+	return 0
 }

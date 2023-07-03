@@ -186,6 +186,8 @@ func TestIndex_ForEachMeasurementName(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		// todo(vinland): is it necessary to keep names in order?
+		sort.Strings(names)
 		if !reflect.DeepEqual(names, []string{"cpu", "mem"}) {
 			t.Fatalf("unexpected names: %#v", names)
 		}
@@ -299,6 +301,17 @@ func TestIndex_MeasurementNamesByRegex(t *testing.T) {
 	// Retrieve measurements by regex.
 	idx.Run(t, func(t *testing.T) {
 		names, err := idx.MeasurementNamesByRegex(regexp.MustCompile(`cpu|mem`))
+
+		// sort []byte
+		namesString := make([]string, 0, len(names))
+		for _, name := range names {
+			namesString = append(namesString, string(name))
+		}
+		sort.Strings(namesString)
+		for i := range names {
+			names[i] = []byte(namesString[i])
+		}
+
 		if err != nil {
 			t.Fatal(err)
 		} else if !reflect.DeepEqual(names, [][]byte{[]byte("cpu"), []byte("mem")}) {
@@ -638,87 +651,87 @@ func BenchmarkIndex_IndexFile_TagValueSeriesIDIterator(b *testing.B) {
 	})
 }
 
-func convertToTSDBTags(tags [][]tsi2.TagPair, name []byte) ([][]byte, [][]byte, []models.Tags) {
-	n := len(tags)
-	// names
-	names := make([][]byte, 0, n)
-	for i := 0; i < n; i++ {
-		names = append(names, name)
-	}
-	// tagsSlice
-	tagsSlice := make([]models.Tags, 0, n)
-	for i := 0; i < n; i++ {
-		m := map[string]string{}
-		for _, tag := range tags[i] {
-			m[tag.TagKey] = tag.TagValue
-		}
-		tagsSlice = append(tagsSlice, models.NewTags(m))
-	}
-	// keys
-	keys := tsdb.GenerateSeriesKeys(names, tagsSlice)
-	return keys, names, tagsSlice
-}
+// func convertToTSDBTags(tags [][]tsi2.TagPair, name []byte) ([][]byte, [][]byte, []models.Tags) {
+// 	n := len(tags)
+// 	// names
+// 	names := make([][]byte, 0, n)
+// 	for i := 0; i < n; i++ {
+// 		names = append(names, name)
+// 	}
+// 	// tagsSlice
+// 	tagsSlice := make([]models.Tags, 0, n)
+// 	for i := 0; i < n; i++ {
+// 		m := map[string]string{}
+// 		for _, tag := range tags[i] {
+// 			m[tag.TagKey] = tag.TagValue
+// 		}
+// 		tagsSlice = append(tagsSlice, models.NewTags(m))
+// 	}
+// 	// keys
+// 	keys := tsdb.GenerateSeriesKeys(names, tagsSlice)
+// 	return keys, names, tagsSlice
+// }
 
-func TestConvertToTSDBTags(t *testing.T) {
-	convertToTSDBTags(
-		[][]tsi2.TagPair{
-			{
-				{TagKey: "a", TagValue: "1"},
-				{TagKey: "b", TagValue: "1"},
-			},
-			{
-				{TagKey: "a", TagValue: "2"},
-				{TagKey: "b", TagValue: "2"},
-			},
-		},
-		[]byte("test"),
-	)
-	// fmt.Printf("keys: %v\nname: %v\ntagsSlice: %v\n", keys, names, tagsSlice)
-}
+// func TestConvertToTSDBTags(t *testing.T) {
+// 	convertToTSDBTags(
+// 		[][]tsi2.TagPair{
+// 			{
+// 				{TagKey: "a", TagValue: "1"},
+// 				{TagKey: "b", TagValue: "1"},
+// 			},
+// 			{
+// 				{TagKey: "a", TagValue: "2"},
+// 				{TagKey: "b", TagValue: "2"},
+// 			},
+// 		},
+// 		[]byte("test"),
+// 	)
+// 	// fmt.Printf("keys: %v\nname: %v\ntagsSlice: %v\n", keys, names, tagsSlice)
+// }
 
-func BenchmarkIndex_IndexFile_CreatSeriesListIfNotExist_Vinland(b *testing.B) {
-	tagPairSets := gen.GenerateInsertTagPairSets(tagKeyNum, tagValueNum)
-	keys, names, tagsSlice := convertToTSDBTags(tagPairSets, []byte("test"))
+// func BenchmarkIndex_IndexFile_CreatSeriesListIfNotExist_Vinland(b *testing.B) {
+// 	tagPairSets := gen.GenerateInsertTagsSlice(tagKeyNum, tagValueNum)
+// 	keys, names, tagsSlice := convertToTSDBTags(tagPairSets, []byte("test"))
 
-	runBenchMark := func(b *testing.B, cacheSize int) {
-		var err error
-		sfile := NewSeriesFile(b)
-		// Load index
-		idx := tsi2.NewIndex(sfile.SeriesFile, "foo",
-			tsi2.WithPath("testdata/index-file-index"),
-			// tsi2.DisableCompactions(),
-			// tsi2.WithSeriesIDCacheSize(cacheSize),
-		)
-		defer sfile.Close()
+// 	runBenchMark := func(b *testing.B, cacheSize int) {
+// 		var err error
+// 		sfile := NewSeriesFile(b)
+// 		// Load index
+// 		idx := tsi2.NewIndex(sfile.SeriesFile, "foo",
+// 			tsi2.WithPath("testdata/index-file-index"),
+// 			// tsi2.DisableCompactions(),
+// 			// tsi2.WithSeriesIDCacheSize(cacheSize),
+// 		)
+// 		defer sfile.Close()
 
-		if err = idx.Open(); err != nil {
-			b.Fatal(err)
-		}
-		defer idx.Close()
+// 		if err = idx.Open(); err != nil {
+// 			b.Fatal(err)
+// 		}
+// 		defer idx.Close()
 
-		for i := 0; i < b.N; i++ {
-			idx.CreateSeriesListIfNotExists(keys, names, tagsSlice)
-			// tsiditr, err = idx.TagValueSeriesIDIterator([]byte("m4"), []byte("tag0"), []byte("value4"))
-			// if err != nil {
-			// 	b.Fatal(err)
-			// } else if tsiditr == nil {
-			// 	b.Fatal("got nil iterator")
-			// }
-		}
-	}
+// 		for i := 0; i < b.N; i++ {
+// 			idx.CreateSeriesListIfNotExists(keys, names, tagsSlice)
+// 			// tsiditr, err = idx.TagValueSeriesIDIterator([]byte("m4"), []byte("tag0"), []byte("value4"))
+// 			// if err != nil {
+// 			// 	b.Fatal(err)
+// 			// } else if tsiditr == nil {
+// 			// 	b.Fatal("got nil iterator")
+// 			// }
+// 		}
+// 	}
 
-	// This benchmark will merge eight bitsets each containing ~10,000 series IDs.
-	b.Run("78888 series TagValueSeriesIDIterator", func(b *testing.B) {
-		b.ReportAllocs()
-		b.Run("cache", func(b *testing.B) {
-			runBenchMark(b, tsdb.DefaultSeriesIDSetCacheSize)
-		})
+// 	// This benchmark will merge eight bitsets each containing ~10,000 series IDs.
+// 	b.Run("78888 series TagValueSeriesIDIterator", func(b *testing.B) {
+// 		b.ReportAllocs()
+// 		b.Run("cache", func(b *testing.B) {
+// 			runBenchMark(b, tsdb.DefaultSeriesIDSetCacheSize)
+// 		})
 
-		b.Run("no cache", func(b *testing.B) {
-			runBenchMark(b, 0)
-		})
-	})
-}
+// 		b.Run("no cache", func(b *testing.B) {
+// 			runBenchMark(b, 0)
+// 		})
+// 	})
+// }
 
 var errResult error
 

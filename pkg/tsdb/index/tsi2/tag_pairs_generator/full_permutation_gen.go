@@ -4,66 +4,85 @@ import (
 	"fmt"
 
 	"cycledb/pkg/tsdb/index/tsi2"
+
+	"github.com/influxdata/influxdb/v2/models"
 )
+
+type TagPair struct {
+	TagKey   string
+	TagValue string
+}
 
 type FullPermutationGen struct{}
 
-func (g *FullPermutationGen) GenerateInsertTagPairSets(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
-	return g.generateFullPermutationTagSets(tagKeyNum, tagValueNum, false)
+func (g *FullPermutationGen) GenerateInsertTagsSlice(tagKeyNum, tagValueNum int) []models.Tags {
+	return ConvertTagsSliceToModelTagsSlice(g.generateFullPermutationTagsSlice(tagKeyNum, tagValueNum, false))
 }
 
-// GenerateQueryTagPairSets: responsible for formatting queries.
+// GenerateQueryTagsSlice: responsible for formatting queries.
 // 1. remove empty tag pairs, [[a:0],[],[c:1]]->[[a:0],[c:1]]
 // 2. remove [[],[],[]] tatally, since grid index not support it
-func (g *FullPermutationGen) GenerateQueryTagPairSets(tagKeyNum, tagValueNum int) [][]tsi2.TagPair {
-	tagPairSets := g.generateFullPermutationTagSets(tagKeyNum, tagValueNum, true)
-	for i := 0; i < len(tagPairSets); i++ {
-		for j := 0; j < len(tagPairSets[i]); j++ {
-			if len(tagPairSets[i][j].TagKey) == 0 {
+func (g *FullPermutationGen) GenerateQueryTagsSlice(tagKeyNum, tagValueNum int) []models.Tags {
+	TagsSlice := g.generateFullPermutationTagsSlice(tagKeyNum, tagValueNum, true)
+	for i := 0; i < len(TagsSlice); i++ {
+		for j := 0; j < len(TagsSlice[i]); j++ {
+			if len(TagsSlice[i][j].TagKey) == 0 {
 				// it's safe to delete like this in Golang
-				tagPairSets[i] = append(tagPairSets[i][:j], tagPairSets[i][j+1:]...)
+				TagsSlice[i] = append(TagsSlice[i][:j], TagsSlice[i][j+1:]...)
 				j--
 			}
 		}
-		if len(tagPairSets[i]) == 0 {
-			tagPairSets = append(tagPairSets[:i], tagPairSets[i+1:]...)
+		if len(TagsSlice[i]) == 0 {
+			TagsSlice = append(TagsSlice[:i], TagsSlice[i+1:]...)
 			i--
 		}
 	}
-	return tagPairSets
+	return ConvertTagsSliceToModelTagsSlice(TagsSlice)
 }
 
-// generateFullPermutationTagSets: returns all permutations of tag pairs.
+func ConvertTagsSliceToModelTagsSlice(tss [][]TagPair) []models.Tags {
+	modelTagsSlice := make([]models.Tags, 0, len(tss))
+	for _, ts := range tss {
+		m := map[string]string{}
+		for _, t := range ts {
+			m[t.TagKey] = t.TagValue
+		}
+		modelTagsSlice = append(modelTagsSlice, models.NewTags(m))
+	}
+	return modelTagsSlice
+}
+
+// generateFullPermutationTagsSlice: returns all permutations of tag pairs.
 // If allow empty, there will be empty tag pair, like [[a:0],[],[c:1]]
-func (g *FullPermutationGen) generateFullPermutationTagSets(tagKeyNum, tagValueNum int, allowEmpty bool) [][]tsi2.TagPair {
+func (g *FullPermutationGen) generateFullPermutationTagsSlice(tagKeyNum, tagValueNum int, allowEmpty bool) [][]TagPair {
 	if tagKeyNum == 1 {
 		return g.generateTagPairsForOneTagKey(tagKeyNum-1, tagValueNum, allowEmpty)
 	}
 
 	currLayer := g.generateTagPairsForOneTagKey(tagKeyNum-1, tagValueNum, allowEmpty)
-	prevLayers := g.generateFullPermutationTagSets(tagKeyNum-1, tagValueNum, allowEmpty)
-	res := make([][]tsi2.TagPair, 0, tsi2.PowUint64(tagValueNum, tagKeyNum))
+	prevLayers := g.generateFullPermutationTagsSlice(tagKeyNum-1, tagValueNum, allowEmpty)
+	res := make([][]TagPair, 0, tsi2.PowUint64(tagValueNum, tagKeyNum))
 
 	for _, curr := range currLayer {
 		for _, prev := range prevLayers {
 			if len(curr) > 0 {
 				res = append(res, append(prev, curr[0]))
 			} else {
-				res = append(res, append(prev, tsi2.TagPair{}))
+				res = append(res, append(prev, TagPair{}))
 			}
 		}
 	}
 	return res
 }
 
-func (g *FullPermutationGen) generateTagPairsForOneTagKey(tagKeyIndex, tagValueNum int, allowEmpty bool) [][]tsi2.TagPair {
-	res := make([][]tsi2.TagPair, 0, tagValueNum)
+func (g *FullPermutationGen) generateTagPairsForOneTagKey(tagKeyIndex, tagValueNum int, allowEmpty bool) [][]TagPair {
+	res := make([][]TagPair, 0, tagValueNum)
 	key := fmt.Sprintf("%c", 'a'+tagKeyIndex)
 	if allowEmpty {
-		res = append(res, []tsi2.TagPair{})
+		res = append(res, []TagPair{})
 	}
 	for i := 0; i < tagValueNum; i++ {
-		res = append(res, []tsi2.TagPair{
+		res = append(res, []TagPair{
 			{
 				TagKey:   key,
 				TagValue: fmt.Sprintf("%d", i),
