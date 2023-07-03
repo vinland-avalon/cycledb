@@ -1,6 +1,10 @@
 package tsi2_test
 
 import (
+	"compress/gzip"
+	"fmt"
+	"io"
+	"os"
 	"reflect"
 	"regexp"
 	"sort"
@@ -431,7 +435,7 @@ func TestIndex_Open(t *testing.T) {
 }
 
 func TestIndex_TagValueSeriesIDIterator(t *testing.T) {
-	// idx1 := MustOpenDefaultIndex(t) // Uses the single series creation method CreateSeriesIfNotExists
+	idx1 := MustOpenDefaultIndex(t) // Uses the single series creation method CreateSeriesIfNotExists
 	// defer idx1.Close()
 	idx2 := MustOpenDefaultIndex(t) // Uses the batch series creation method CreateSeriesListIfNotExists
 	defer idx2.Close()
@@ -459,9 +463,9 @@ func TestIndex_TagValueSeriesIDIterator(t *testing.T) {
 	var batchNames [][]byte
 	var batchTags []models.Tags
 	for _, pt := range data {
-		// if err := idx1.CreateSeriesIfNotExists([]byte(pt.Key), []byte(pt.Name), models.NewTags(pt.Tags)); err != nil {
-		// 	t.Fatal(err)
-		// }
+		if err := idx1.CreateSeriesIfNotExists([]byte(pt.Key), []byte(pt.Name), models.NewTags(pt.Tags)); err != nil {
+			t.Fatal(err)
+		}
 
 		batchKeys = append(batchKeys, []byte(pt.Key))
 		batchNames = append(batchNames, []byte(pt.Name))
@@ -472,25 +476,14 @@ func TestIndex_TagValueSeriesIDIterator(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// fmt.Printf("idx2.indexToSeriesFile: %v\n", idx2.IndexIdToSeriesFileId)
-
 	testTagValueSeriesIDIterator := func(t *testing.T, name, key, value string, expKeys []string) {
-		// for i, idx := range []*Index{idx1, idx2} {
-		for i, idx := range []*Index{idx2} {
+		for i, idx := range []*Index{idx1, idx2} {
 			sitr, err := idx.TagValueSeriesIDIterator([]byte(name), []byte(key), []byte(value))
 			if err != nil {
 				t.Fatalf("[index %d] %v", i, err)
 			} else if sitr == nil {
 				t.Fatalf("[index %d] series id iterater nil", i)
 			}
-
-			// fmt.Printf("sitr: %+v", sitr)
-			// for e, err := sitr.Next(); err == nil; e, err = sitr.Next() {
-			// 	if e == nil {
-			// 		break
-			// 	}
-			// 	fmt.Printf("e: %+v, %+v", e.SeriesID, e.Expr)
-			// }
 
 			// Convert series ids to series keys.
 			itr := tsdb.NewSeriesIteratorAdapter(idx.SeriesFile.SeriesFile, sitr)
@@ -536,69 +529,398 @@ func TestIndex_TagValueSeriesIDIterator(t *testing.T) {
 		})
 	})
 
-	// // The result should now be cached, and the same result should be returned.
-	// t.Run("cached", func(t *testing.T) {
-	// 	testTagValueSeriesIDIterator(t, "mem", "region", "west", []string{
-	// 		"mem,region=west,server=a",
-	// 		"mem,region=west,server=b",
-	// 		"mem,region=west,server=c",
-	// 	})
-	// })
+	// The result should now be cached, and the same result should be returned.
+	t.Run("cached", func(t *testing.T) {
+		testTagValueSeriesIDIterator(t, "mem", "region", "west", []string{
+			"mem,region=west,server=a",
+			"mem,region=west,server=b",
+			"mem,region=west,server=c",
+		})
+	})
 
-	// // // Adding a new series that would be referenced by some cached bitsets (in this case
-	// // // the bitsets for mem->region->west and mem->server->c) should cause the cached
-	// // // bitsets to be updated.
-	// // if err := idx1.CreateSeriesIfNotExists(
-	// // 	[]byte("mem,region=west,root=x,server=c"),
-	// // 	[]byte("mem"),
-	// // 	models.NewTags(map[string]string{"region": "west", "root": "x", "server": "c"}),
-	// // ); err != nil {
-	// // 	t.Fatal(err)
-	// // }
+	// Adding a new series that would be referenced by some cached bitsets (in this case
+	// the bitsets for mem->region->west and mem->server->c) should cause the cached
+	// bitsets to be updated.
+	if err := idx1.CreateSeriesIfNotExists(
+		[]byte("mem,region=west,root=x,server=c"),
+		[]byte("mem"),
+		models.NewTags(map[string]string{"region": "west", "root": "x", "server": "c"}),
+	); err != nil {
+		t.Fatal(err)
+	}
 
-	// if err := idx2.CreateSeriesListIfNotExists(
-	// 	[][]byte{[]byte("mem,region=west,root=x,server=c")},
-	// 	[][]byte{[]byte("mem")},
-	// 	[]models.Tags{models.NewTags(map[string]string{"region": "west", "root": "x", "server": "c"})},
-	// ); err != nil {
-	// 	t.Fatal(err)
-	// }
+	if err := idx2.CreateSeriesListIfNotExists(
+		[][]byte{[]byte("mem,region=west,root=x,server=c")},
+		[][]byte{[]byte("mem")},
+		[]models.Tags{models.NewTags(map[string]string{"region": "west", "root": "x", "server": "c"})},
+	); err != nil {
+		t.Fatal(err)
+	}
 
-	// t.Run("insert series", func(t *testing.T) {
-	// 	testTagValueSeriesIDIterator(t, "mem", "region", "west", []string{
-	// 		"mem,region=west,root=x,server=c",
-	// 		"mem,region=west,server=a",
-	// 		"mem,region=west,server=b",
-	// 		"mem,region=west,server=c",
-	// 	})
-	// })
+	t.Run("insert series", func(t *testing.T) {
+		testTagValueSeriesIDIterator(t, "mem", "region", "west", []string{
+			"mem,region=west,root=x,server=c",
+			"mem,region=west,server=a",
+			"mem,region=west,server=b",
+			"mem,region=west,server=c",
+		})
+	})
 
-	// // if err := idx1.CreateSeriesIfNotExists(
-	// // 	[]byte("mem,region=west,root=x,server=c"),
-	// // 	[]byte("mem"),
-	// // 	models.NewTags(map[string]string{"region": "west", "root": "x", "server": "c"}),
-	// // ); err != nil {
-	// // 	t.Fatal(err)
-	// // }
+	if err := idx1.CreateSeriesIfNotExists(
+		[]byte("mem,region=west,root=x,server=c"),
+		[]byte("mem"),
+		models.NewTags(map[string]string{"region": "west", "root": "x", "server": "c"}),
+	); err != nil {
+		t.Fatal(err)
+	}
 
-	// if err := idx2.CreateSeriesListIfNotExists(
-	// 	[][]byte{[]byte("mem,region=west,root=x,server=c")},
-	// 	[][]byte{[]byte("mem")},
-	// 	[]models.Tags{models.NewTags(map[string]string{"region": "west", "root": "x", "server": "c"})},
-	// ); err != nil {
-	// 	t.Fatal(err)
-	// }
+	if err := idx2.CreateSeriesListIfNotExists(
+		[][]byte{[]byte("mem,region=west,root=x,server=c")},
+		[][]byte{[]byte("mem")},
+		[]models.Tags{models.NewTags(map[string]string{"region": "west", "root": "x", "server": "c"})},
+	); err != nil {
+		t.Fatal(err)
+	}
 
-	// t.Run("insert same series", func(t *testing.T) {
-	// 	testTagValueSeriesIDIterator(t, "mem", "region", "west", []string{
-	// 		"mem,region=west,root=x,server=c",
-	// 		"mem,region=west,server=a",
-	// 		"mem,region=west,server=b",
-	// 		"mem,region=west,server=c",
-	// 	})
-	// })
+	t.Run("insert same series", func(t *testing.T) {
+		testTagValueSeriesIDIterator(t, "mem", "region", "west", []string{
+			"mem,region=west,root=x,server=c",
+			"mem,region=west,server=a",
+			"mem,region=west,server=b",
+			"mem,region=west,server=c",
+		})
+	})
 
-	// t.Run("no matching series", func(t *testing.T) {
-	// 	testTagValueSeriesIDIterator(t, "foo", "bar", "zoo", nil)
-	// })
+	t.Run("no matching series", func(t *testing.T) {
+		testTagValueSeriesIDIterator(t, "foo", "bar", "zoo", nil)
+	})
 }
+
+var tsiditr tsdb.SeriesIDIterator
+
+func BenchmarkIndex_IndexFile_TagValueSeriesIDIterator(b *testing.B) {
+	runBenchMark := func(b *testing.B, cacheSize int) {
+		var err error
+		sfile := NewSeriesFile(b)
+		// Load index
+		idx := tsi2.NewIndex(sfile.SeriesFile, "foo",
+			tsi2.WithPath("testdata/index-file-index"),
+			// tsi2.DisableCompactions(),
+			// tsi2.WithSeriesIDCacheSize(cacheSize),
+		)
+		defer sfile.Close()
+
+		if err = idx.Open(); err != nil {
+			b.Fatal(err)
+		}
+		defer idx.Close()
+
+		for i := 0; i < b.N; i++ {
+			tsiditr, err = idx.TagValueSeriesIDIterator([]byte("m4"), []byte("tag0"), []byte("value4"))
+			if err != nil {
+				b.Fatal(err)
+			} else if tsiditr == nil {
+				b.Fatal("got nil iterator")
+			}
+		}
+	}
+
+	// This benchmark will merge eight bitsets each containing ~10,000 series IDs.
+	b.Run("78888 series TagValueSeriesIDIterator", func(b *testing.B) {
+		b.ReportAllocs()
+		b.Run("cache", func(b *testing.B) {
+			runBenchMark(b, tsdb.DefaultSeriesIDSetCacheSize)
+		})
+
+		b.Run("no cache", func(b *testing.B) {
+			runBenchMark(b, 0)
+		})
+	})
+}
+
+func convertToTSDBTags(tags [][]tsi2.TagPair, name []byte) ([][]byte, [][]byte, []models.Tags) {
+	n := len(tags)
+	// names
+	names := make([][]byte, 0, n)
+	for i := 0; i < n; i++ {
+		names = append(names, name)
+	}
+	// tagsSlice
+	tagsSlice := make([]models.Tags, 0, n)
+	for i := 0; i < n; i++ {
+		m := map[string]string{}
+		for _, tag := range tags[i] {
+			m[tag.TagKey] = tag.TagValue
+		}
+		tagsSlice = append(tagsSlice, models.NewTags(m))
+	}
+	// keys
+	keys := tsdb.GenerateSeriesKeys(names, tagsSlice)
+	return keys, names, tagsSlice
+}
+
+func TestConvertToTSDBTags(t *testing.T) {
+	keys, names, tagsSlice := convertToTSDBTags(
+		[][]tsi2.TagPair{
+			{
+				{TagKey: "a", TagValue: "1"},
+				{TagKey: "b", TagValue: "1"},
+			},
+			{
+				{TagKey: "a", TagValue: "2"},
+				{TagKey: "b", TagValue: "2"},
+			},
+		},
+		[]byte("test"),
+	)
+	fmt.Printf("keys: %v\nname: %v\ntagsSlice: %v\n", keys, names, tagsSlice)
+}
+
+func BenchmarkIndex_IndexFile_CreatSeriesListIfNotExist_Vinland(b *testing.B) {
+	tagPairSets := gen.GenerateInsertTagPairSets(tagKeyNum, tagValueNum)
+	keys, names, tagsSlice := convertToTSDBTags(tagPairSets, []byte("test"))
+
+	runBenchMark := func(b *testing.B, cacheSize int) {
+		var err error
+		sfile := NewSeriesFile(b)
+		// Load index
+		idx := tsi2.NewIndex(sfile.SeriesFile, "foo",
+			tsi2.WithPath("testdata/index-file-index"),
+			// tsi2.DisableCompactions(),
+			// tsi2.WithSeriesIDCacheSize(cacheSize),
+		)
+		defer sfile.Close()
+
+		if err = idx.Open(); err != nil {
+			b.Fatal(err)
+		}
+		defer idx.Close()
+
+		for i := 0; i < b.N; i++ {
+			idx.CreateSeriesListIfNotExists(keys, names, tagsSlice)
+			// tsiditr, err = idx.TagValueSeriesIDIterator([]byte("m4"), []byte("tag0"), []byte("value4"))
+			// if err != nil {
+			// 	b.Fatal(err)
+			// } else if tsiditr == nil {
+			// 	b.Fatal("got nil iterator")
+			// }
+		}
+	}
+
+	// This benchmark will merge eight bitsets each containing ~10,000 series IDs.
+	b.Run("78888 series TagValueSeriesIDIterator", func(b *testing.B) {
+		b.ReportAllocs()
+		b.Run("cache", func(b *testing.B) {
+			runBenchMark(b, tsdb.DefaultSeriesIDSetCacheSize)
+		})
+
+		b.Run("no cache", func(b *testing.B) {
+			runBenchMark(b, 0)
+		})
+	})
+}
+
+var errResult error
+
+func BenchmarkIndex_CreateSeriesListIfNotExists(b *testing.B) {
+	// Read line-protocol and coerce into tsdb format.
+	keys := make([][]byte, 0, 1e6)
+	names := make([][]byte, 0, 1e6)
+	tags := make([]models.Tags, 0, 1e6)
+
+	// 1M series generated with:
+	// $inch -b 10000 -c 1 -t 10,10,10,10,10,10 -f 1 -m 5 -p 1
+	fd, err := os.Open("./testdata/line-protocol-1M.txt.gz")
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	gzr, err := gzip.NewReader(fd)
+	if err != nil {
+		fd.Close()
+		b.Fatal(err)
+	}
+
+	data, err := io.ReadAll(gzr)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	if err := fd.Close(); err != nil {
+		b.Fatal(err)
+	}
+
+	points, err := models.ParsePoints(data)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	for _, pt := range points {
+		keys = append(keys, pt.Key())
+		names = append(names, pt.Name())
+		tags = append(tags, pt.Tags())
+	}
+
+	batchSizes := []int{1000, 10000, 100000}
+	partitions := []uint64{1, 2, 4, 8, 16}
+	for _, sz := range batchSizes {
+		b.Run(fmt.Sprintf("batch size %d", sz), func(b *testing.B) {
+			for _, partition := range partitions {
+				b.Run(fmt.Sprintf("partition %d", partition), func(b *testing.B) {
+					idx := MustOpenDefaultIndex(b)
+					for j := 0; j < b.N; j++ {
+						for i := 0; i < len(keys); i += sz {
+							k := keys[i : i+sz]
+							n := names[i : i+sz]
+							t := tags[i : i+sz]
+							if errResult = idx.CreateSeriesListIfNotExists(k, n, t); errResult != nil {
+								b.Fatal(err)
+							}
+						}
+						// Reset the index...
+						b.StopTimer()
+						if err := idx.Close(); err != nil {
+							b.Fatal(err)
+						}
+						idx = MustOpenDefaultIndex(b)
+						b.StartTimer()
+					}
+				})
+			}
+		})
+	}
+}
+
+// // This benchmark concurrently writes series to the index and fetches cached bitsets.
+// // The idea is to emphasize the performance difference when bitset caching is on and off.
+// func BenchmarkIndex_ConcurrentWriteQuery(b *testing.B) {
+// 	// Read line-protocol and coerce into tsdb format.
+// 	keys := make([][]byte, 0, 1e6)
+// 	names := make([][]byte, 0, 1e6)
+// 	tags := make([]models.Tags, 0, 1e6)
+
+// 	// 1M series generated with:
+// 	// $inch -b 10000 -c 1 -t 10,10,10,10,10,10 -f 1 -m 5 -p 1
+// 	fd, err := os.Open("testdata/line-protocol-1M.txt.gz")
+// 	if err != nil {
+// 		b.Fatal(err)
+// 	}
+
+// 	gzr, err := gzip.NewReader(fd)
+// 	if err != nil {
+// 		fd.Close()
+// 		b.Fatal(err)
+// 	}
+
+// 	data, err := io.ReadAll(gzr)
+// 	if err != nil {
+// 		b.Fatal(err)
+// 	}
+
+// 	if err := fd.Close(); err != nil {
+// 		b.Fatal(err)
+// 	}
+
+// 	points, err := models.ParsePoints(data)
+// 	if err != nil {
+// 		b.Fatal(err)
+// 	}
+
+// 	for _, pt := range points {
+// 		keys = append(keys, pt.Key())
+// 		names = append(names, pt.Name())
+// 		tags = append(tags, pt.Tags())
+// 	}
+
+// 	runBenchmark := func(b *testing.B, queryN int, partitions uint64, cacheSize int) {
+// 		idx := &Index{SeriesFile: NewSeriesFile(b)}
+// 		idx.Index = tsi2.NewIndex(idx.SeriesFile.SeriesFile, "db0", tsi2.WithPath(b.TempDir()))
+// 		// idx.Index.PartitionN = partitions
+
+// 		if err := idx.Open(); err != nil {
+// 			panic(err)
+// 		}
+
+// 		var wg sync.WaitGroup
+
+// 		// Run concurrent iterator...
+// 		runIter := func(b *testing.B) {
+// 			keys := [][]string{
+// 				{"m0", "tag2", "value4"},
+// 				{"m1", "tag3", "value5"},
+// 				{"m2", "tag4", "value6"},
+// 				{"m3", "tag0", "value8"},
+// 				{"m4", "tag5", "value0"},
+// 			}
+
+// 			for i := 0; i < queryN/5; i++ {
+// 				for _, key := range keys {
+// 					itr, err := idx.TagValueSeriesIDIterator([]byte(key[0]), []byte(key[1]), []byte(key[2]))
+// 					if err != nil {
+// 						b.Fatal(err)
+// 					} else if itr == nil {
+// 						b.Fatal("got nil iterator")
+// 					}
+// 					if err := itr.Close(); err != nil {
+// 						b.Fatal(err)
+// 					}
+// 				}
+// 			}
+// 		}
+
+// 		wg.Add(1)
+// 		go func() { defer wg.Done(); runIter(b) }()
+// 		batchSize := 10000
+
+// 		for j := 0; j < 1; j++ {
+// 			for i := 0; i < len(keys); i += batchSize {
+// 				k := keys[i : i+batchSize]
+// 				n := names[i : i+batchSize]
+// 				t := tags[i : i+batchSize]
+// 				if errResult = idx.CreateSeriesListIfNotExists(k, n, t); errResult != nil {
+// 					b.Fatal(err)
+// 				}
+// 			}
+
+// 			// Wait for queries to finish
+// 			wg.Wait()
+
+// 			// Reset the index...
+// 			b.StopTimer()
+// 			if err := idx.Close(); err != nil {
+// 				b.Fatal(err)
+// 			}
+
+// 			// Re-open everything
+// 			idx := &Index{SeriesFile: NewSeriesFile(b)}
+// 			idx.Index = tsi2.NewIndex(idx.SeriesFile.SeriesFile, "db0", tsi2.WithPath(b.TempDir()))
+// 			// idx.Index.PartitionN = partitions
+
+// 			if err := idx.Open(); err != nil {
+// 				b.Fatal(err)
+// 			}
+
+// 			wg.Add(1)
+// 			go func() { defer wg.Done(); runIter(b) }()
+// 			b.StartTimer()
+// 		}
+// 	}
+
+// 	partitions := []uint64{1, 4, 8, 16}
+// 	queries := []int{1e5}
+// 	for _, partition := range partitions {
+// 		b.Run(fmt.Sprintf("partition %d", partition), func(b *testing.B) {
+// 			for _, queryN := range queries {
+// 				b.Run(fmt.Sprintf("queries %d", queryN), func(b *testing.B) {
+// 					b.Run("cache", func(b *testing.B) {
+// 						runBenchmark(b, queryN, partition, tsdb.DefaultSeriesIDSetCacheSize)
+// 					})
+
+// 					b.Run("no cache", func(b *testing.B) {
+// 						runBenchmark(b, queryN, partition, 0)
+// 					})
+// 				})
+// 			}
+// 		})
+// 	}
+// }

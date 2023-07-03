@@ -150,8 +150,11 @@ func (ms *Measurements) TagKeySeriesIDIterator(name, key []byte, mp map[uint64]u
 
 func (ms *Measurements) TagValueSeriesIDIterator(name, key, value []byte, mp map[uint64]uint64) (tsdb.SeriesIDSetIterator, error) {
 	m, err := ms.MeasurementByName(name)
-	if err != nil || m == nil {
+	if err != nil {
 		return nil, err
+	}
+	if m == nil {
+		return NewSeriesIDSetIterator(tsdb.NewSeriesIDSet()), nil
 	}
 	return NewSeriesIDSetIterator(m.SeriesIDSetWithTagValue(key, value, mp)), nil
 }
