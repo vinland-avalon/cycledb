@@ -10,12 +10,12 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/influxdata/influxdb/v2/influxql/query"
 	"cycledb/pkg/internal"
-	"github.com/influxdata/influxdb/v2/models"
-	"github.com/influxdata/influxdb/v2/pkg/slices"
 	"cycledb/pkg/tsdb"
 	"cycledb/pkg/tsdb/index/tsi1"
+	"github.com/influxdata/influxdb/v2/influxql/query"
+	"github.com/influxdata/influxdb/v2/models"
+	"github.com/influxdata/influxdb/v2/pkg/slices"
 	"github.com/influxdata/influxql"
 	"go.uber.org/zap/zaptest"
 )
@@ -564,7 +564,7 @@ func BenchmarkIndexSet_TagSets(b *testing.B) {
 // This benchmark concurrently writes series to the index and fetches cached bitsets.
 // The idea is to emphasize the performance difference when bitset caching is on and off.
 //
-// Typical results for an i7 laptop
+// # Typical results for an i7 laptop
 //
 // BenchmarkIndex_ConcurrentWriteQuery/tsi1/queries_100000/cache-8        1	1645048376 ns/op	2215402840 B/op	 23048978 allocs/op
 // BenchmarkIndex_ConcurrentWriteQuery/tsi1/queries_100000/no_cache-8     1	22242155616 ns/op	28277544136 B/op 79620463 allocs/op

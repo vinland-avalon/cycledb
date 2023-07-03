@@ -9,9 +9,9 @@ package tsm
 import (
 	"context"
 
+	"cycledb/pkg/tsdb"
 	"github.com/influxdata/influxdb/v2/influxql/query"
 	"github.com/influxdata/influxdb/v2/models"
-	"cycledb/pkg/tsdb"
 )
 
 // buildFloatArrayCursor creates an array cursor for a float field.

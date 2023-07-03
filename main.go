@@ -23,7 +23,7 @@ var (
 )
 
 func main() {
-	basePath := "../instance/"+time.Now().Format(time.RFC850)+"/"
+	basePath := "../instance/" + time.Now().Format(time.RFC850) + "/"
 	shardPath = basePath + shardPath
 	shardWalPath = basePath + shardWalPath
 	seriesFilePath = basePath + seriesFilePath

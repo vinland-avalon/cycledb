@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/influxdb/v2/models"
 	"cycledb/pkg/tsdb"
 	"cycledb/pkg/tsdb/index/tsi1"
+	"github.com/influxdata/influxdb/v2/models"
 )
 
 // Ensure a simple index file can be built and opened.

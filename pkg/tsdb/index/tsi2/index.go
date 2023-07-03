@@ -51,6 +51,7 @@ type Index struct {
 // An IndexOption is a functional option for changing the configuration of
 // an Index.
 type IndexOption func(i *Index)
+
 // WithPath sets the root path of the Index
 var WithPath = func(path string) IndexOption {
 	return func(i *Index) {

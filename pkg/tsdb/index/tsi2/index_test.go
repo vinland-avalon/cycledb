@@ -660,7 +660,7 @@ func convertToTSDBTags(tags [][]tsi2.TagPair, name []byte) ([][]byte, [][]byte, 
 }
 
 func TestConvertToTSDBTags(t *testing.T) {
-	keys, names, tagsSlice := convertToTSDBTags(
+	convertToTSDBTags(
 		[][]tsi2.TagPair{
 			{
 				{TagKey: "a", TagValue: "1"},
@@ -673,7 +673,7 @@ func TestConvertToTSDBTags(t *testing.T) {
 		},
 		[]byte("test"),
 	)
-	fmt.Printf("keys: %v\nname: %v\ntagsSlice: %v\n", keys, names, tagsSlice)
+	// fmt.Printf("keys: %v\nname: %v\ntagsSlice: %v\n", keys, names, tagsSlice)
 }
 
 func BenchmarkIndex_IndexFile_CreatSeriesListIfNotExist_Vinland(b *testing.B) {

@@ -138,7 +138,7 @@ func TestLogFile_SeriesStoredInOrder(t *testing.T) {
 		}, []models.Tags{
 			{models.NewTag([]byte("host"), []byte(tv))},
 			{models.NewTag([]byte("host"), []byte(tv))},
-		},[]uint64{}); err != nil {
+		}, []uint64{}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -191,7 +191,7 @@ func TestLogFile_DeleteMeasurement(t *testing.T) {
 		{{Key: []byte("host"), Value: []byte("serverA")}},
 		{{Key: []byte("region"), Value: []byte("us-east")}},
 		{{Key: []byte("region"), Value: []byte("us-west")}},
-	},[]uint64{}); err != nil {
+	}, []uint64{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -222,7 +222,7 @@ func TestLogFile_Open(t *testing.T) {
 		defer f.Close()
 
 		// Add test data & close.
-		if _, err := f.AddSeriesList(seriesSet, [][]byte{[]byte("cpu"), []byte("mem")}, []models.Tags{{{}}, {{}}},[]uint64{}); err != nil {
+		if _, err := f.AddSeriesList(seriesSet, [][]byte{[]byte("cpu"), []byte("mem")}, []models.Tags{{{}}, {{}}}, []uint64{}); err != nil {
 			t.Fatal(err)
 		} else if err := f.LogFile.Close(); err != nil {
 			t.Fatal(err)

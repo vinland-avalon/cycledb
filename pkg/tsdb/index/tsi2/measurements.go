@@ -115,7 +115,6 @@ func (ms *Measurements) SetTagPairSet(name []byte, tags models.Tags) (uint64, bo
 	return m.SetTagPairSet(tags)
 }
 
-
 func (ms *Measurements) HasTagKey(name, key []byte) (bool, error) {
 	m, err := ms.MeasurementByName(name)
 	if err != nil || m == nil {

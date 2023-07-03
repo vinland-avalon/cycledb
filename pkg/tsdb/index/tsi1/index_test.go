@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/influxdb/v2/models"
 	"cycledb/pkg/tsdb"
 	"cycledb/pkg/tsdb/index/tsi1"
+	"github.com/influxdata/influxdb/v2/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
