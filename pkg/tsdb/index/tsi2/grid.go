@@ -1,49 +1,80 @@
 package tsi2
 
+import (
+	"cycledb/pkg/tsdb"
+
+	"github.com/influxdata/influxdb/v2/models"
+)
+
 type Grid struct {
 	// the grids are linked, so id should skip
-	offset int64
-	// for each Grid, the size of tag values array (tagValuess)
+	offset uint64
+	// for each Grid, the size of tag values array (tagValuesSlice)
 	// and size of element(capacity) within is pre-allocated
-	tagValuess []*TagValues
-	tagKeys    []string
+	tagValuesSlice []*TagValues
+	tagKeys        []string
 	// to accelerate search
 	tagKeyToIndex map[string]int
+
+	// bitmap
+	seriesIDSet *tsdb.SeriesIDSet
 }
 
-func initGrid(offset int64, tagPairSet []TagPair, tagValuess []*TagValues) *Grid {
+func initGrid(offset uint64, tags models.Tags, tagValuesSlice []*TagValues) *Grid {
 	g := &Grid{
-		offset:        offset,
-		tagValuess:    tagValuess,
-		tagKeys:       []string{},
-		tagKeyToIndex: map[string]int{},
+		offset:         offset,
+		tagValuesSlice: tagValuesSlice,
+		tagKeys:        []string{},
+		tagKeyToIndex:  map[string]int{},
+		seriesIDSet:    tsdb.NewSeriesIDSet(),
 	}
-	for i, tagPair := range tagPairSet {
-		g.tagKeyToIndex[tagPair.TagKey] = i
-		g.tagKeys = append(g.tagKeys, tagPair.TagKey)
+	for i, tag := range tags {
+		g.tagKeyToIndex[string(tag.Key)] = i
+		g.tagKeys = append(g.tagKeys, string(tag.Key))
 	}
 	return g
 }
 
-// getGridSize: return the number of tag keys inside
-func (g *Grid) getGridSize() int {
+func (g *Grid) HasTagKey(key string) bool {
+	if _, ok := g.tagKeyToIndex[key]; ok {
+		return true
+	}
+	return false
+}
+
+func (g *Grid) HasTagValue(key, value string) bool {
+	if index, ok := g.tagKeyToIndex[key]; !ok {
+		return false
+	} else {
+		values := g.tagValuesSlice[index]
+		if _, ok = values.valueToIndex[value]; !ok {
+			return false
+		} else {
+			return true
+		}
+	}
+
+}
+
+// getNumOfDimensions: return the number of tag keys inside
+func (g *Grid) getNumOfDimensions() int {
 	return len(g.tagKeys)
 }
 
 // getCapacityOfIDs: the number of ids in this grid
-func (g *Grid) getCapacityOfIDs() int {
-	length := 1
-	for _, tagValues := range g.tagValuess {
-		length *= tagValues.capacity
+func (g *Grid) getCapacityOfIDs() uint64 {
+	capacity := uint64(1)
+	for _, tagValues := range g.tagValuesSlice {
+		capacity *= tagValues.capacity
 	}
-	return length
+	return capacity
 }
 
-func (g *Grid) tagPairExists(tagPair TagPair) bool {
-	if tagValuesIndex, ok := g.tagKeyToIndex[tagPair.TagKey]; !ok {
+func (g *Grid) tagValueExists(tag models.Tag) bool {
+	if tagValuesIndex, ok := g.tagKeyToIndex[string(tag.Key)]; !ok {
 		return false
 	} else {
-		if g.tagValuess[tagValuesIndex].GetValueIndex(tagPair.TagValue) == -1 {
+		if g.tagValuesSlice[tagValuesIndex].GetValueIndex(string(tag.Value)) == -1 {
 			return false
 		} else {
 			return true
@@ -51,78 +82,95 @@ func (g *Grid) tagPairExists(tagPair TagPair) bool {
 	}
 }
 
-// GetStrictlyMatchedIDForTagPairSet: return -1 if not find it, else return id
-func (g *Grid) GetStrictlyMatchedIDForTagPairSet(tagPairSet []TagPair) int64 {
-	if len(tagPairSet) != g.getGridSize() {
-		return int64(-1)
+// GetStrictlyMatchedIDForTags: return 0, false if not find it, else return id, true
+func (g *Grid) GetStrictlyMatchedIDForTags(tags models.Tags) (uint64, bool) {
+	id, ok := g.GetStrictlyMatchedIDForTagsNoIDSet(tags)
+	if !ok || !g.seriesIDSet.Contains(id) {
+		return 0, false
 	}
-
-	ids := g.GetSeriesIDsWithTagPairSet(tagPairSet)
-	if len(ids) == 0 {
-		return int64(-1)
-	}
-	return ids[0]
+	return id, true
 }
 
-// SetTagPairSet: return whether the insert succeed and the corresponding id.
-// If fails, return -1.
-// Only when tags matches and all have free slot, the insert succeeds.
-func (g *Grid) SetTagPairSet(tagPairSet []TagPair) int64 {
-	if !g.ableToSetTagPairSet(tagPairSet) {
-		return -1
+// GetStrictlyMatchedIDForTagsNoIDSet: Only check grid, ignore SeriesIdsSet, return 0, false if not find it, else return id, true
+func (g *Grid) GetStrictlyMatchedIDForTagsNoIDSet(tags models.Tags) (uint64, bool) {
+	if len(tags) != g.getNumOfDimensions() {
+		return 0, false
 	}
-	// get the tag pairs already exists, which means they don't need to be inserted
-	existedTagPairIndex := map[int]struct{}{}
-	for i, tagPair := range tagPairSet {
-		index, ok := g.tagKeyToIndex[tagPair.TagKey]
+
+	ids := g.GetSeriesIDsWithTagsNoIDSet(tags)
+	if len(ids) == 0 {
+		return 0, false
+	}
+
+	return ids[0], true
+}
+
+// SetTags: return whether the insert succeed and the corresponding id.
+// The returned bool represents whether the id will exist after calling, which means, 1) already exist and 2) insert successfully both return true.
+// Only when tags matches and all have free slot, the insert succeeds.
+func (g *Grid) SetTags(tags models.Tags) (uint64, bool) {
+	id, ok := g.GetStrictlyMatchedIDForTags(tags)
+	if ok {
+		return id, ok
+	}
+	if !g.ableToSetTags(tags) {
+		return 0, false
+	}
+	// get the tag pairs already exist, which means they don't need to be inserted
+	existedTagIndex := map[int]struct{}{}
+	for i, tag := range tags {
+		index, ok := g.tagKeyToIndex[string(tag.Key)]
 		// the tag key does not match
 		if !ok {
-			return -1
+			return 0, false
 		}
 
 		// if value already exist, no need to insert
-		tagValues := g.tagValuess[index]
-		if tagValues.GetValueIndex(tagPair.TagValue) != -1 {
-			existedTagPairIndex[i] = struct{}{}
+		tagValues := g.tagValuesSlice[index]
+		if tagValues.GetValueIndex(string(tag.Value)) != -1 {
+			existedTagIndex[i] = struct{}{}
 		}
 	}
 
 	// do the insert
-	for i, tagPair := range tagPairSet {
-		if _, ok := existedTagPairIndex[i]; ok {
+	for i, tag := range tags {
+		if _, ok := existedTagIndex[i]; ok {
 			continue
 		}
-		index, _ := g.tagKeyToIndex[tagPair.TagKey]
-		tagValues := g.tagValuess[index]
-		tagValues.SetValue(tagPair.TagValue)
+		index := g.tagKeyToIndex[string(tag.Key)]
+		tagValues := g.tagValuesSlice[index]
+		tagValues.SetValue(string(tag.Value))
 	}
 
 	// calculate id
-	return g.GetStrictlyMatchedIDForTagPairSet(tagPairSet)
+	id, _ = g.GetStrictlyMatchedIDForTagsNoIDSet(tags)
+	g.seriesIDSet.Add(id)
+	return id, true
 }
 
-// TODO(vinland-avalon): also need to judge if whole tag pairs already exist
-func (g *Grid) ableToSetTagPairSet(tagPairSet []TagPair) bool {
+// ableToSetTags: returns whether tags could be inserted in grid.
+// For grids could represent tags already, also return true.
+func (g *Grid) ableToSetTags(tags models.Tags) bool {
 	// check each tag key matches and have free slot
 	// the tag key does not match
-	if len(tagPairSet) != g.getGridSize() {
+	if len(tags) != g.getNumOfDimensions() {
 		return false
 	}
-	for _, tagPair := range tagPairSet {
-		index, ok := g.tagKeyToIndex[tagPair.TagKey]
+	for _, tag := range tags {
+		index, ok := g.tagKeyToIndex[string(tag.Key)]
 		// the tag key does not match
 		if !ok {
 			return false
 		}
 
 		// if value already exist, no need to insert
-		tagValues := g.tagValuess[index]
-		if tagValues.GetValueIndex(tagPair.TagValue) != -1 {
+		tagValues := g.tagValuesSlice[index]
+		if tagValues.GetValueIndex(string(tag.Value)) != -1 {
 			continue
 		}
 
 		// no free slot
-		if g.tagKeyExistsAndFilledUp(tagPair.TagKey) {
+		if g.tagKeyExistsAndFilledUp(string(tag.Key)) {
 			return false
 		}
 	}
@@ -137,50 +185,60 @@ func (g *Grid) tagKeyExistsAndFilledUp(tagKey string) bool {
 	}
 
 	// filled up already
-	tagValues := g.tagValuess[index]
-	if tagValues.capacity == len(tagValues.values) {
-		return true
-	}
-	return false
+	tagValues := g.tagValuesSlice[index]
+	return tagValues.capacity == uint64(len(tagValues.values))
 }
 
-func (g *Grid) GetSeriesIDsWithTagPairSet(tagPairSet []TagPair) []int64 {
+func (g *Grid) GetSeriesIDSetForTags(tags models.Tags) *tsdb.SeriesIDSet {
+	ids := g.GetSeriesIDsWithTagsNoIDSet(tags)
+	idsSet := tsdb.NewSeriesIDSet(ids...)
+	return idsSet.And(g.seriesIDSet)
+}
+
+func (g *Grid) GetSeriesIDsWithTagsNoIDSet(tags models.Tags) []uint64 {
+	ids := []uint64{}
 	// check if tag pairs match
-	if len(tagPairSet) > g.getGridSize() {
-		return []int64{}
+	if len(tags) > g.getNumOfDimensions() {
+		return ids
 	}
-	for _, tagPair := range tagPairSet {
-		if !g.tagPairExists(tagPair) {
-			return []int64{}
+	for _, tag := range tags {
+		if !g.tagValueExists(tag) {
+			return ids
 		}
 	}
 
-	// TODO(vinland-avalon): not support non-condition search so far
-	if len(tagPairSet) == 0 {
-		return []int64{}
+	if len(tags) == 0 {
+		g.seriesIDSet.ForEach(func(id uint64) {
+			ids = append(ids, id+g.offset)
+		})
+		return ids
 	}
 
-	dimensions := make([][]int, 0, g.getGridSize())
+	indexes := make([]int, 0, g.getNumOfDimensions())
+	capacities := make([]uint64, 0, g.getNumOfDimensions())
 	for i := range g.tagKeys {
-		dimensions = append(dimensions, []int{-1, g.tagValuess[i].capacity})
+		indexes = append(indexes, -1)
+		capacities = append(capacities, g.tagValuesSlice[i].capacity)
 	}
-	for _, tagPair := range tagPairSet {
-		idx := g.tagKeyToIndex[tagPair.TagKey]
-		valueIdx := g.tagValuess[idx].GetValueIndex(tagPair.TagValue)
-		dimensions[idx][0] = valueIdx
+	for _, tag := range tags {
+		idx := g.tagKeyToIndex[string(tag.Key)]
+		valueIdx := g.tagValuesSlice[idx].GetValueIndex(string(tag.Value))
+		indexes[idx] = valueIdx
 	}
 
-	prev := []int64{}
-	if dimensions[0][0] != -1 {
-		prev = append(prev, int64(dimensions[0][0]))
+	prev := []uint64{}
+	if indexes[0] != -1 {
+		prev = append(prev, uint64(indexes[0]))
 	} else {
-		for i := 0; i < dimensions[0][1]; i++ {
-			prev = append(prev, int64(i))
+		for i := uint64(0); i < capacities[0]; i++ {
+			prev = append(prev, i)
 		}
 	}
-	ids := VariableBaseConvert(dimensions, 1, prev)
+	ids = VariableBaseConvert(indexes, capacities, 1, prev)
+
 	for i := range ids {
 		ids[i] += g.offset
 	}
+
 	return ids
 }

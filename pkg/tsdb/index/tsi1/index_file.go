@@ -9,11 +9,11 @@ import (
 	"sync"
 	"unsafe"
 
+	"cycledb/pkg/tsdb"
 	"github.com/influxdata/influxdb/v2/models"
 	"github.com/influxdata/influxdb/v2/pkg/estimator"
 	"github.com/influxdata/influxdb/v2/pkg/estimator/hll"
 	"github.com/influxdata/influxdb/v2/pkg/mmap"
-	"cycledb/pkg/tsdb"
 )
 
 // IndexFileVersion is the current TSI1 index file version.

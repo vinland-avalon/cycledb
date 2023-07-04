@@ -1,8 +1,10 @@
 package tsi2
 
+import "github.com/influxdata/influxdb/v2/models"
+
 type Optimizer interface {
 	// To Generate a new grid with information of GridIndex
-	NewOptimizedGrid(*GridIndex, []TagPair) *Grid
+	NewOptimizedGrid(*GridIndex, models.Tags) *Grid
 }
 
 // If in the previous grids, the tag key `K` is filled up n times,
@@ -24,21 +26,22 @@ func NewMultiplierOptimizer(basicNum, multiplier int) *MultiplierOptimizer {
 	}
 }
 
-func (a *MultiplierOptimizer) NewOptimizedGrid(gi *GridIndex, tagPairSet []TagPair) *Grid {
-	offset := int64(0)
+func (a *MultiplierOptimizer) NewOptimizedGrid(gi *GridIndex, tags models.Tags) *Grid {
+	// so that the id begins at 1, not 0
+	offset := uint64(1)
 	if len(gi.grids) != 0 {
 		lastGrid := gi.grids[len(gi.grids)-1]
 		lastGridLength := lastGrid.getCapacityOfIDs()
-		offset = lastGrid.offset + int64(lastGridLength)
+		offset = lastGrid.offset + uint64(lastGridLength)
 	}
 
-	tagValuess := make([]*TagValues, 0, len(tagPairSet))
-	for i := 0; i < len(tagPairSet); i++ {
-		n := gi.GetNumOfFilledUpGridForSingleTagKey(tagPairSet[i].TagKey)
-		tagValuess = append(tagValuess, newTagValues(PowInt(a.multiplier, n)*a.basicNum))
-		tagValuess[i].SetValue(tagPairSet[i].TagValue)
+	tagValuess := make([]*TagValues, 0, len(tags))
+	for i := 0; i < len(tags); i++ {
+		n := gi.GetNumOfFilledUpGridForSingleTagKey(string(tags[i].Key))
+		tagValuess = append(tagValuess, newTagValues(PowUint64(a.multiplier, n)*uint64(a.basicNum)))
+		tagValuess[i].SetValue(string(tags[i].Value))
 	}
 
-	grid := initGrid(offset, tagPairSet, tagValuess)
+	grid := initGrid(offset, tags, tagValuess)
 	return grid
 }

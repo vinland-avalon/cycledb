@@ -22,11 +22,11 @@ import (
 
 	"cycledb/pkg/tsdb"
 
+	"cycledb/pkg/internal"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/influxdata/influxdb/v2/influxql/query"
-	"cycledb/pkg/internal"
 	"github.com/influxdata/influxdb/v2/models"
 	"github.com/influxdata/influxdb/v2/pkg/deep"
 	"github.com/influxdata/influxdb/v2/pkg/testing/assert"

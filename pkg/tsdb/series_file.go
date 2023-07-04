@@ -42,6 +42,9 @@ type SeriesFile struct {
 	refs sync.RWMutex // RWMutex to track references to the SeriesFile that are in use.
 
 	Logger *zap.Logger
+
+	// when insert series, wheather map to passed ids or create one
+	// DesignateId bool
 }
 
 // NewSeriesFile returns a new instance of SeriesFile.
@@ -57,6 +60,21 @@ func NewSeriesFile(path string) *SeriesFile {
 		Logger:                 zap.NewNop(),
 	}
 }
+
+// // NewSeriesFileWithDesignatedIDS returns a new instance of SeriesFile.
+// func NewSeriesFileWithDesignatedIDS(path string) *SeriesFile {
+// 	maxSnapshotConcurrency := runtime.GOMAXPROCS(0)
+// 	if maxSnapshotConcurrency < 1 {
+// 		maxSnapshotConcurrency = 1
+// 	}
+
+// 	return &SeriesFile{
+// 		path:                   path,
+// 		maxSnapshotConcurrency: maxSnapshotConcurrency,
+// 		Logger:                 zap.NewNop(),
+// 		DesignateId:            true,
+// 	}
+// }
 
 func (f *SeriesFile) WithMaxCompactionConcurrency(maxCompactionConcurrency int) {
 	if maxCompactionConcurrency < 1 {

@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/influxdb/v2/models"
 	"cycledb/pkg/tsdb"
 	"cycledb/pkg/tsdb/index/tsi1"
+	"github.com/influxdata/influxdb/v2/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -744,7 +744,7 @@ func BenchmarkIndex_CreateSeriesListIfNotExists(b *testing.B) {
 
 	// 1M series generated with:
 	// $inch -b 10000 -c 1 -t 10,10,10,10,10,10 -f 1 -m 5 -p 1
-	fd, err := os.Open("../../testdata/line-protocol-1M.txt.gz")
+	fd, err := os.Open("./testdata/line-protocol-1M.txt.gz")
 	if err != nil {
 		b.Fatal(err)
 	}

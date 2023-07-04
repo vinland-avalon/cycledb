@@ -1,9 +1,9 @@
 // for test, genrate inserts and queries
 package generator
 
-import "cycledb/pkg/tsdb/index/tsi2"
+import "github.com/influxdata/influxdb/v2/models"
 
 type Generator interface {
-	GenerateInsertTagPairSets(tagKeyNum, tagValueNum int) [][]tsi2.TagPair
+	GenerateInsertTagsSlice(tagKeyNum, tagValueNum int) []models.Tags
 	// GenerateQueryTagPairSets(tagKeyNum, tagValueNum int) [][]tsi2.TagPair
 }

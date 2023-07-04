@@ -7,8 +7,8 @@ package mock
 import (
 	reflect "reflect"
 
-	gomock "github.com/golang/mock/gomock"
 	cursors "cycledb/pkg/tsdb/cursors"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockIntegerArrayCursor is a mock of IntegerArrayCursor interface

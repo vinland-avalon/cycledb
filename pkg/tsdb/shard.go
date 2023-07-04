@@ -19,6 +19,7 @@ import (
 	"unicode"
 	"unsafe"
 
+	internal "cycledb/pkg/tsdb/fieldsindex"
 	"github.com/influxdata/influxdb/v2/influxql/query"
 	"github.com/influxdata/influxdb/v2/logger"
 	"github.com/influxdata/influxdb/v2/models"
@@ -28,7 +29,6 @@ import (
 	"github.com/influxdata/influxdb/v2/pkg/file"
 	"github.com/influxdata/influxdb/v2/pkg/limiter"
 	"github.com/influxdata/influxdb/v2/pkg/slices"
-	internal "cycledb/pkg/tsdb/fieldsindex"
 	"github.com/influxdata/influxql"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"

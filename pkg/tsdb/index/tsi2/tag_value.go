@@ -1,13 +1,13 @@
 package tsi2
 
 type TagValues struct {
-	capacity int
+	capacity uint64
 	// TODO(vinland-avalon): any
 	values       []string
 	valueToIndex map[string]int
 }
 
-func newTagValues(cap int) *TagValues {
+func newTagValues(cap uint64) *TagValues {
 	return &TagValues{
 		capacity:     cap,
 		values:       []string{},
@@ -19,7 +19,7 @@ func newTagValues(cap int) *TagValues {
 // If already exist or append new value to the end, return true.
 // If reach capacity, return false.
 func (tvs *TagValues) SetValue(v string) bool {
-	if tvs.capacity == len(tvs.values) {
+	if tvs.capacity == uint64(len(tvs.values)) {
 		return false
 	}
 	if _, ok := tvs.valueToIndex[v]; ok {

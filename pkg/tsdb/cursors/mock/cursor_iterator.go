@@ -8,8 +8,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "github.com/golang/mock/gomock"
 	cursors "cycledb/pkg/tsdb/cursors"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockCursorIterator is a mock of CursorIterator interface

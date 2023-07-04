@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/influxdata/influxdb/v2/models"
 	"cycledb/pkg/tsdb/index/tsi1"
+	"github.com/influxdata/influxdb/v2/models"
 )
 
 // Ensure multiple index files can be compacted together.

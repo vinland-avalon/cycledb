@@ -12,11 +12,11 @@ import (
 	"sort"
 	"sync"
 
+	"cycledb/pkg/tsdb"
 	"github.com/influxdata/influxdb/v2/influxql/query"
 	"github.com/influxdata/influxdb/v2/pkg/metrics"
 	"github.com/influxdata/influxdb/v2/pkg/tracing"
 	"github.com/influxdata/influxdb/v2/pkg/tracing/fields"
-	"cycledb/pkg/tsdb"
 	"github.com/influxdata/influxql"
 	"go.uber.org/zap"
 )

@@ -7,8 +7,8 @@ import (
 	"path"
 	"testing"
 
-	"github.com/influxdata/influxdb/v2/models"
 	"cycledb/pkg/tsdb"
+	"github.com/influxdata/influxdb/v2/models"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 	"golang.org/x/sync/errgroup"
