@@ -42,6 +42,6 @@ func (a *MultiplierOptimizer) NewOptimizedGrid(gi *GridIndex, tags models.Tags) 
 		tagValuess[i].SetValue(string(tags[i].Value))
 	}
 
-	grid := initGrid(offset, tags, tagValuess)
+	grid := NewGridWithSingleTags(offset, tags, tagValuess)
 	return grid
 }

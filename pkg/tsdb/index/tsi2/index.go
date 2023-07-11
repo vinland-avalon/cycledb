@@ -1,20 +1,36 @@
 package tsi2
 
 import (
+	"bufio"
+	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"regexp"
+	"sort"
+	"time"
 
 	"github.com/influxdata/influxdb/pkg/bytesutil"
+	"github.com/influxdata/influxdb/v2/logger"
 	"github.com/influxdata/influxdb/v2/models"
 	"github.com/influxdata/influxdb/v2/pkg/estimator"
 	"github.com/influxdata/influxql"
 	"go.uber.org/zap"
 
 	"cycledb/pkg/tsdb"
+	"cycledb/pkg/tsdb/index/tsi1"
 )
 
-var Version = 1
+var (
+	Version      = 1
+	IndexFileExt = ".tsi2"
+
+	// indexFileBufferSize is the buffer size used when compacting the LogFile down
+	// into a .tsi file.
+	indexFileBufferSize = 1 << 17 // 128K
+)
 
 type Index struct {
 	// todo(vinland): partition
@@ -373,4 +389,139 @@ func (i *Index) Type() string {
 // Returns a unique reference ID to the index instance.
 func (i *Index) UniqueReferenceID() uintptr {
 	panic("unimplemented")
+}
+
+func (i *Index) Compact() {
+	start := time.Now()
+
+	id := 1
+
+	log, logEnd := logger.NewOperation(context.TODO(), i.logger, "TSI2 compaction", "tsi2_compact", zap.Int("tsi2_id", id))
+	defer logEnd()
+
+	// Create new index file.
+	path := filepath.Join(i.path, FormatIndexFileName(id, 1))
+	f, err := os.Create(path)
+	if err != nil {
+		log.Error("Cannot create index file", zap.Error(err))
+		return
+	}
+	defer f.Close()
+
+	// Compact index in memory to new index file.
+	lvl := tsi1.CompactionLevel{M: 1 << 25, K: 6}
+	n, err := i.CompactTo(f, lvl.M, lvl.K)
+	if err != nil {
+		log.Error("Cannot compact index", zap.Error(err))
+		return
+	}
+
+	if err = f.Sync(); err != nil {
+		log.Error("Cannot sync index file", zap.Error(err))
+		return
+	}
+
+	// Close file.
+	if err := f.Close(); err != nil {
+		log.Error("Cannot close index file", zap.Error(err))
+		return
+	}
+
+	// todo(vinland):// Reopen as an index file.
+
+	elapsed := time.Since(start)
+	log.Info("index compacted",
+		logger.DurationLiteral("elapsed", elapsed),
+		zap.Int64("bytes", n),
+		zap.Int("kb_per_sec", int(float64(n)/elapsed.Seconds())/1024),
+	)
+}
+
+// CompactTo compacts the in-memory index and writes it to w.
+func (i *Index) CompactTo(w io.Writer, m, k uint64) (n int64, err error) {
+	// Wrap in bufferred writer with a buffer equivalent to the LogFile size.
+	bw := bufio.NewWriterSize(w, indexFileBufferSize) // 128K
+
+	// Setup compaction offset tracking data.
+	// var t IndexFileTrailer
+	info := newLogFileCompactInfo()
+	// info.cancel = cancel
+
+	// Write magic number.
+	if err := writeTo(bw, []byte(FileSignature), &n); err != nil {
+		return n, err
+	}
+
+	// Retreve measurement names in order.
+	names := i.measurementNames()
+
+	// Flush buffer & mmap series block.
+	if err := bw.Flush(); err != nil {
+		return n, err
+	}
+
+	// Write tagset blocks in measurement order.
+	if err := i.writeTagsetsTo(bw, names, info, &n); err != nil {
+		return n, err
+	}
+
+	return n, nil
+}
+
+func (i *Index) measurementNames() []string {
+	a := make([]string, 0, len(i.measurements.measurementId))
+	for name := range i.measurements.measurementId {
+		a = append(a, name)
+	}
+	sort.Strings(a)
+	return a
+}
+
+func (i *Index) writeTagsetsTo(w io.Writer, names []string, info *logFileCompactInfo, n *int64) error {
+	for _, name := range names {
+		if err := i.writeTagsetTo(w, name, info, n); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// writeTagsetTo writes a single tagset to w and saves the tagset offset.
+func (i *Index) writeTagsetTo(w io.Writer, name string, info *logFileCompactInfo, n *int64) error {
+	mm, err := i.measurements.MeasurementByName([]byte(name))
+	if err != nil {
+		return err
+	}
+
+	// // Check for cancellation.
+	// select {
+	// case <-info.cancel:
+	// 	return ErrCompactionInterrupted
+	// default:
+	// }
+
+	enc := NewGridBlockEncoder(w)
+	for _, grid := range mm.gIndex.grids {
+		err = enc.EncodeGrid(grid)
+		if err != nil {
+			return err
+		}
+	}
+
+	// // Save tagset offset to measurement.
+	// offset := *n
+
+	// // Flush tag block.
+	// err := enc.Close()
+	// *n += enc.N()
+	// if err != nil {
+	// 	return err
+	// }
+
+	// // Save tagset offset to measurement.
+	// size := *n - offset
+
+	// info.mms[name] = &logFileMeasurementCompactInfo{offset: offset, size: size}
+
+	return nil
 }
