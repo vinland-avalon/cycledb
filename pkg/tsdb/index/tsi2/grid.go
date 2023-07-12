@@ -20,17 +20,31 @@ type Grid struct {
 	seriesIDSet *tsdb.SeriesIDSet
 }
 
-func initGrid(offset uint64, tags models.Tags, tagValuesSlice []*TagValues) *Grid {
+func NewGridWithSingleTags(offset uint64, tags models.Tags, tagValuesSlice []*TagValues) *Grid {
 	g := &Grid{
 		offset:         offset,
 		tagValuesSlice: tagValuesSlice,
 		tagKeys:        []string{},
 		tagKeyToIndex:  map[string]int{},
-		seriesIDSet:    tsdb.NewSeriesIDSet(),
+		seriesIDSet:    tsdb.NewSeriesIDSet(offset),
 	}
 	for i, tag := range tags {
 		g.tagKeyToIndex[string(tag.Key)] = i
 		g.tagKeys = append(g.tagKeys, string(tag.Key))
+	}
+	return g
+}
+
+func NewGridWithKeysAndValuesSlice(offset uint64, keys []string, tagValuesSlice []*TagValues, seriesIDSet *tsdb.SeriesIDSet) *Grid {
+	g := &Grid{
+		offset: offset,
+		tagValuesSlice: tagValuesSlice,
+		tagKeys: keys,
+		tagKeyToIndex:  map[string]int{},
+		seriesIDSet: seriesIDSet,
+	}
+	for i, key := range keys {
+		g.tagKeyToIndex[key] = i
 	}
 	return g
 }
