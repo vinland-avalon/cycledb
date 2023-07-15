@@ -21,25 +21,30 @@ type IndexFileTrailer struct {
 		Size   int64
 	}
 
-	SeriesIDSet struct {
+	// SeriesIDSet struct {
+	// 	Offset int64
+	// 	Size   int64
+	// }
+
+	IndexIdToSeriesFileId struct {
 		Offset int64
 		Size   int64
 	}
 
-	TombstoneSeriesIDSet struct {
-		Offset int64
-		Size   int64
-	}
+	// TombstoneSeriesIDSet struct {
+	// 	Offset int64
+	// 	Size   int64
+	// }
 
-	SeriesSketch struct {
-		Offset int64
-		Size   int64
-	}
+	// SeriesSketch struct {
+	// 	Offset int64
+	// 	Size   int64
+	// }
 
-	TombstoneSeriesSketch struct {
-		Offset int64
-		Size   int64
-	}
+	// TombstoneSeriesSketch struct {
+	// 	Offset int64
+	// 	Size   int64
+	// }
 }
 
 // WriteTo writes the trailer to w.
@@ -52,32 +57,39 @@ func (t *IndexFileTrailer) WriteTo(w io.Writer) (n int64, err error) {
 	}
 
 	// Write series id set info.
-	if err := writeUint64To(w, uint64(t.SeriesIDSet.Offset), &n); err != nil {
+	if err := writeUint64To(w, uint64(t.IndexIdToSeriesFileId.Offset), &n); err != nil {
 		return n, err
-	} else if err := writeUint64To(w, uint64(t.SeriesIDSet.Size), &n); err != nil {
-		return n, err
-	}
-
-	// Write tombstone series id set info.
-	if err := writeUint64To(w, uint64(t.TombstoneSeriesIDSet.Offset), &n); err != nil {
-		return n, err
-	} else if err := writeUint64To(w, uint64(t.TombstoneSeriesIDSet.Size), &n); err != nil {
+	} else if err := writeUint64To(w, uint64(t.IndexIdToSeriesFileId.Size), &n); err != nil {
 		return n, err
 	}
 
-	// Write series sketch info.
-	if err := writeUint64To(w, uint64(t.SeriesSketch.Offset), &n); err != nil {
-		return n, err
-	} else if err := writeUint64To(w, uint64(t.SeriesSketch.Size), &n); err != nil {
-		return n, err
-	}
+	// // Write series id set info.
+	// if err := writeUint64To(w, uint64(t.SeriesIDSet.Offset), &n); err != nil {
+	// 	return n, err
+	// } else if err := writeUint64To(w, uint64(t.SeriesIDSet.Size), &n); err != nil {
+	// 	return n, err
+	// }
 
-	// Write series tombstone sketch info.
-	if err := writeUint64To(w, uint64(t.TombstoneSeriesSketch.Offset), &n); err != nil {
-		return n, err
-	} else if err := writeUint64To(w, uint64(t.TombstoneSeriesSketch.Size), &n); err != nil {
-		return n, err
-	}
+	// // Write tombstone series id set info.
+	// if err := writeUint64To(w, uint64(t.TombstoneSeriesIDSet.Offset), &n); err != nil {
+	// 	return n, err
+	// } else if err := writeUint64To(w, uint64(t.TombstoneSeriesIDSet.Size), &n); err != nil {
+	// 	return n, err
+	// }
+
+	// // Write series sketch info.
+	// if err := writeUint64To(w, uint64(t.SeriesSketch.Offset), &n); err != nil {
+	// 	return n, err
+	// } else if err := writeUint64To(w, uint64(t.SeriesSketch.Size), &n); err != nil {
+	// 	return n, err
+	// }
+
+	// // Write series tombstone sketch info.
+	// if err := writeUint64To(w, uint64(t.TombstoneSeriesSketch.Offset), &n); err != nil {
+	// 	return n, err
+	// } else if err := writeUint64To(w, uint64(t.TombstoneSeriesSketch.Size), &n); err != nil {
+	// 	return n, err
+	// }
 
 	// Write index file encoding version.
 	if err := writeUint16To(w, IndexFileVersion, &n); err != nil {
@@ -133,20 +145,27 @@ func writeUvarintTo(w io.Writer, v uint64, n *int64) error {
 	return err
 }
 
-// logFileCompactInfo is a context object to track compaction position info.
-type logFileCompactInfo struct {
-	cancel <-chan struct{}
-	mms    map[string]*logFileMeasurementCompactInfo
+// IndexFileCompactInfo is a context object to track compaction position info.
+type IndexFileCompactInfo struct {
+	// cancel                <-chan struct{}
+	mms map[string]*indexFileMeasurementCompactInfo
 }
 
-// newLogFileCompactInfo returns a new instance of logFileCompactInfo.
-func newLogFileCompactInfo() *logFileCompactInfo {
-	return &logFileCompactInfo{
-		mms: make(map[string]*logFileMeasurementCompactInfo),
+// newIndexFileCompactInfo returns a new instance of logFileCompactInfo.
+func newIndexFileCompactInfo() *IndexFileCompactInfo {
+	return &IndexFileCompactInfo{
+		mms: make(map[string]*indexFileMeasurementCompactInfo),
 	}
 }
 
-type logFileMeasurementCompactInfo struct {
+type indexFileMeasurementCompactInfo struct {
+	offset int64
+	size   int64
+
+	gridInfos []*GridCompactInfo
+}
+
+type GridCompactInfo struct {
 	offset int64
 	size   int64
 }
