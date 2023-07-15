@@ -44,8 +44,7 @@ func NewGridBlockEncoder(w io.Writer) *GridBlockEncoder {
 func (enc *GridBlockEncoder) N() int64 { return enc.n }
 
 func (enc *GridBlockEncoder) EncodeGrid(g *Grid) error {
-
-	// 8 bytes	
+	// 8 bytes
 	writeUint64To(enc.w, g.offset, &enc.n)
 
 	// 8 + (8 + len(key) ...)

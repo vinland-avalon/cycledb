@@ -609,6 +609,81 @@ func TestIndex_TagValueSeriesIDIterator(t *testing.T) {
 	})
 }
 
+func TestIndex_WriteGridBlock(t *testing.T) {
+	idx := MustOpenDefaultIndex(t) // Uses the batch series creation method CreateSeriesListIfNotExists
+	defer idx.Close()
+
+	// Add some series.
+	data := []struct {
+		Key  string
+		Name string
+		Tags map[string]string
+	}{
+		{"cpu,region=west,server=a", "cpu", map[string]string{"region": "west", "server": "a"}},
+		{"cpu,region=west,server=b", "cpu", map[string]string{"region": "west", "server": "b"}},
+		{"cpu,region=east,server=a", "cpu", map[string]string{"region": "east", "server": "a"}},
+		{"cpu,region=north,server=c", "cpu", map[string]string{"region": "north", "server": "c"}},
+		{"cpu,region=south,server=s", "cpu", map[string]string{"region": "south", "server": "s"}},
+		{"mem,region=west,server=a", "mem", map[string]string{"region": "west", "server": "a"}},
+		{"mem,region=west,server=b", "mem", map[string]string{"region": "west", "server": "b"}},
+		{"mem,region=west,server=c", "mem", map[string]string{"region": "west", "server": "c"}},
+		{"disk,region=east,server=a", "disk", map[string]string{"region": "east", "server": "a"}},
+		// {"disk,region=east,server=a", "disk", map[string]string{"region": "east", "server": "a"}},
+		{"disk,region=north,server=c", "disk", map[string]string{"region": "north", "server": "c"}},
+	}
+
+	var batchKeys [][]byte
+	var batchNames [][]byte
+	var batchTags []models.Tags
+	for _, pt := range data {
+		batchKeys = append(batchKeys, []byte(pt.Key))
+		batchNames = append(batchNames, []byte(pt.Name))
+		batchTags = append(batchTags, models.NewTags(pt.Tags))
+	}
+
+	if err := idx.CreateSeriesListIfNotExists(batchKeys, batchNames, batchTags); err != nil {
+		t.Fatal(err)
+	}
+
+	f, err := os.CreateTemp("./", "write_grid_block_test_")
+	if err != nil {
+		panic(fmt.Sprintf("failed to create temp file: %v", err))
+	}
+	t.Cleanup(func() {
+		f.Close()
+		os.Remove(f.Name())
+	})
+
+	// bw := bufio.NewWriterSize(f, 1<<17) // 128K
+
+	names := idx.MeasurementNames()
+	assert.Equal(t, []string{"cpu", "disk", "mem"}, names)
+
+	n := int64(0)
+	info := tsi2.NewIndexFileCompactInfo()
+	err = idx.WriteGridBlockTo(f, names, info, &n)
+	assert.Nil(t, err)
+	// fmt.Printf("info:\n %+v\n", info.Show())
+	assert.Equal(t, len(info.Mms), 3)
+
+	buf := make([]byte, 512)
+	cnt, err := f.ReadAt(buf, 0)
+	assert.Equal(t, err, nil)
+	assert.NotEqual(t, cnt, 0)
+
+	for _, mm := range info.Mms {
+		g, err := tsi2.DecodeGrid(buf[mm.Offset:mm.Size+mm.Offset])
+		assert.Nil(t, err)
+		assert.NotNil(t, g)
+	}
+
+	// g, err := tsi2.DecodeGrid(buf[0:204])
+	// g, err := tsi2.DecodeGrid(buf[204:359])
+	// g, err := tsi2.DecodeGrid(buf[359:512])
+	// assert.Nil(t, err)
+	// fmt.Printf("grid in file: %+v", g)
+}
+
 var tsiditr tsdb.SeriesIDIterator
 
 func BenchmarkIndex_IndexFile_TagValueSeriesIDIterator(b *testing.B) {

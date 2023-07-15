@@ -444,7 +444,7 @@ func (i *Index) CompactTo(w io.Writer, m, k uint64) (n int64, err error) {
 
 	// Setup compaction offset tracking data.
 	var t IndexFileTrailer
-	info := newIndexFileCompactInfo()
+	info := NewIndexFileCompactInfo()
 	// info.cancel = cancel
 
 	// Write magic number.
@@ -453,7 +453,7 @@ func (i *Index) CompactTo(w io.Writer, m, k uint64) (n int64, err error) {
 	}
 
 	// Retreve measurement names in order.
-	names := i.measurementNames()
+	names := i.MeasurementNames()
 
 	// Flush buffer & mmap series block.
 	if err := bw.Flush(); err != nil {
@@ -461,7 +461,7 @@ func (i *Index) CompactTo(w io.Writer, m, k uint64) (n int64, err error) {
 	}
 
 	// Write tagset blocks in measurement order.
-	if err := i.writeGridsTo(bw, names, info, &n); err != nil {
+	if err := i.WriteGridBlockTo(bw, names, info, &n); err != nil {
 		return n, err
 	}
 
@@ -494,7 +494,7 @@ func (i *Index) CompactTo(w io.Writer, m, k uint64) (n int64, err error) {
 	return n, nil
 }
 
-func (i *Index) measurementNames() []string {
+func (i *Index) MeasurementNames() []string {
 	a := make([]string, 0, len(i.measurements.measurementId))
 	for name := range i.measurements.measurementId {
 		a = append(a, name)
@@ -503,7 +503,7 @@ func (i *Index) measurementNames() []string {
 	return a
 }
 
-func (i *Index) writeGridsTo(w io.Writer, names []string, info *IndexFileCompactInfo, n *int64) error {
+func (i *Index) WriteGridBlockTo(w io.Writer, names []string, info *IndexFileCompactInfo, n *int64) error {
 	for _, name := range names {
 		if err := i.writeGridsForMeasurementTo(w, name, info, n); err != nil {
 			return err
@@ -526,32 +526,36 @@ func (i *Index) writeGridsForMeasurementTo(w io.Writer, name string, info *Index
 	// default:
 	// }
 
+	// Save tagset offset to measurement.
+	offset := *n
+
 	enc := NewGridBlockEncoder(w)
+	gridInfos := make([]*GridCompactInfo, 0, len(mm.gIndex.grids))
 	for _, grid := range mm.gIndex.grids {
+		gridInfo := &GridCompactInfo{offset: offset + enc.n}
 		err = enc.EncodeGrid(grid)
 		if err != nil {
 			return err
 		}
+		gridInfo.size = offset + enc.n - gridInfo.offset
+		gridInfos = append(gridInfos, gridInfo)
 	}
 
-	// // Save tagset offset to measurement.
-	// offset := *n
-
-	// // Flush tag block.
+	// Flush tag block.
 	// err := enc.Close()
-	// *n += enc.N()
-	// if err != nil {
-	// 	return err
-	// }
+	*n += enc.N()
+	if err != nil {
+		return err
+	}
 
-	// // Save tagset offset to measurement.
-	// size := *n - offset
+	// Save tagset offset to measurement.
+	size := *n - offset
 
-	// info.mms[name] = &logFileMeasurementCompactInfo{offset: offset, size: size}
+	info.Mms[name] = &IndexFileMeasurementCompactInfo{Offset: offset, Size: size, gridInfos: gridInfos}
 
 	return nil
 }
 
-func (i *Index) writeMeasurementBlockTo (w io.Writer, names []string, info *IndexFileCompactInfo, n *int64) error {
+func (i *Index) writeMeasurementBlockTo(w io.Writer, names []string, info *IndexFileCompactInfo, n *int64) error {
 	panic("unimplemented")
 }

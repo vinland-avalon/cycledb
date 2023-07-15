@@ -21,7 +21,7 @@ func TestSizeOfData(t *testing.T) {
 	assert.Equal(t, len(s), len([]byte(s)))
 }
 
-func DecodeGrid(buf []byte) *Grid {
+func DecodeGrid(buf []byte) (*Grid, error) {
 	offset, buf := uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
 
 	keyNum, buf := uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
@@ -57,12 +57,12 @@ func DecodeGrid(buf []byte) *Grid {
 	ss := tsdb.NewSeriesIDSet()
 	err := ss.UnmarshalBinaryUnsafe(buf[:sz])
 	if err != nil {
-		panic("seriesIdSet")
+		return nil, err
 	}
 
 	// fmt.Printf("offset: %v\nkeys:%+v\nvaluesSlice:%+v\n", offset, keys, valuesSlice)
 	grid := NewGridWithKeysAndValuesSlice(offset, keys, valuesSlice, ss)
-	return grid
+	return grid, nil
 }
 
 func TestEncodeGrid(t *testing.T) {
@@ -103,7 +103,8 @@ func TestEncodeGrid(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.NotEqual(t, n, 0)
 
-	g := DecodeGrid(buf)
+	g, err := DecodeGrid(buf)
+	assert.Equal(t, err, nil)
 
 	assert.Equal(t, grid.offset, g.offset)
 	assert.Equal(t, reflect.DeepEqual(grid.tagKeyToIndex, g.tagKeyToIndex), true)

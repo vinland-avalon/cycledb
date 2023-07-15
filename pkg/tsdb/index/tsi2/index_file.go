@@ -148,21 +148,38 @@ func writeUvarintTo(w io.Writer, v uint64, n *int64) error {
 // IndexFileCompactInfo is a context object to track compaction position info.
 type IndexFileCompactInfo struct {
 	// cancel                <-chan struct{}
-	mms map[string]*indexFileMeasurementCompactInfo
+	Mms map[string]*IndexFileMeasurementCompactInfo
 }
 
-// newIndexFileCompactInfo returns a new instance of logFileCompactInfo.
-func newIndexFileCompactInfo() *IndexFileCompactInfo {
+// NewIndexFileCompactInfo returns a new instance of logFileCompactInfo.
+func NewIndexFileCompactInfo() *IndexFileCompactInfo {
 	return &IndexFileCompactInfo{
-		mms: make(map[string]*indexFileMeasurementCompactInfo),
+		Mms: make(map[string]*IndexFileMeasurementCompactInfo),
 	}
 }
 
-type indexFileMeasurementCompactInfo struct {
-	offset int64
-	size   int64
+func (info *IndexFileCompactInfo) Show() string {
+	var s string
+	for name, measurement := range info.Mms {
+		s = fmt.Sprintf("%s%v: %+v\n", s, name, measurement.Show())
+	}
+	return s
+}
+
+type IndexFileMeasurementCompactInfo struct {
+	Offset int64
+	Size   int64
 
 	gridInfos []*GridCompactInfo
+}
+
+func (info *IndexFileMeasurementCompactInfo) Show() string {
+	s := fmt.Sprintf("offset: %d, size: %d, gridInfos: {", info.Offset, info.Size)
+	for _, inf := range info.gridInfos {
+		s = fmt.Sprintf("%s{grid_offset: %v, gridsize:%+v}", s, inf.offset, inf.size)
+	}
+	s += "}\n"
+	return s
 }
 
 type GridCompactInfo struct {
