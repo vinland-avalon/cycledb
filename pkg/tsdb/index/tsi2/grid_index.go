@@ -154,7 +154,7 @@ func (gi *GridIndex) NewTagValueIterator(key string) *TagValueIterator {
 
 func (gi *GridIndex) SeriesIDSet() *tsdb.SeriesIDSet {
 	gi.mu.RLock()
-	defer gi.mu.Unlock()
+	defer gi.mu.RUnlock()
 	idsSet := tsdb.NewSeriesIDSet()
 	for _, g := range gi.grids {
 		idsSet.MergeInPlace(g.GetSeriesIDSetForTags(nil))
@@ -164,7 +164,7 @@ func (gi *GridIndex) SeriesIDSet() *tsdb.SeriesIDSet {
 
 func (gi *GridIndex) SeriesIDSetForTagKey(key string) *tsdb.SeriesIDSet {
 	gi.mu.RLock()
-	defer gi.mu.Unlock()
+	defer gi.mu.RUnlock()
 	idsSet := tsdb.NewSeriesIDSet()
 	for _, g := range gi.grids {
 		if g.HasTagKey(key) {

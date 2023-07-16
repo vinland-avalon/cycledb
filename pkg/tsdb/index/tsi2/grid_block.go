@@ -81,9 +81,6 @@ func (enc *GridBlockEncoder) EncodeGrid(g *Grid) error {
 	if err := writeUint64To(enc.w, uint64(enc.buf.Len()), &enc.n); err != nil {
 		return err
 	}
-	// if err := writeUvarintTo(enc.w, uint64(enc.buf.Len()), &enc.n); err != nil {
-	// 	return err
-	// }
 	nn, err := enc.buf.WriteTo(enc.w)
 	if enc.n += nn; err != nil {
 		return err

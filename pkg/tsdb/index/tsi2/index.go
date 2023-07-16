@@ -467,7 +467,7 @@ func (i *Index) CompactTo(w io.Writer, m, k uint64) (n int64, err error) {
 
 	// Write measurement block.
 	t.MeasurementBlock.Offset = n
-	if err := i.writeMeasurementBlockTo(bw, names, info, &n); err != nil {
+	if err := i.WriteMeasurementBlockTo(bw, names, info, &n); err != nil {
 		return n, err
 	}
 	t.MeasurementBlock.Size = n - t.MeasurementBlock.Offset
@@ -556,6 +556,31 @@ func (i *Index) writeGridsForMeasurementTo(w io.Writer, name string, info *Index
 	return nil
 }
 
-func (i *Index) writeMeasurementBlockTo(w io.Writer, names []string, info *IndexFileCompactInfo, n *int64) error {
-	panic("unimplemented")
+func (i *Index) WriteMeasurementBlockTo(w io.Writer, names []string, info *IndexFileCompactInfo, n *int64) error {
+	mw := NewMeasurementBlockWriter()
+
+	// // Check for cancellation.
+	// select {
+	// case <-info.cancel:
+	// 	return ErrCompactionInterrupted
+	// default:
+	// }
+
+	// Add measurement data.
+	for _, name := range names {
+		mm, err := i.measurements.MeasurementByName([]byte(name))
+		if err != nil {
+			return ErrMeasurementNotFound
+		}	
+		mmInfo := info.Mms[name]
+		if mmInfo == nil {
+			return ErrMeasurementNotFound
+		}
+		mw.Add([]byte(mm.name), mmInfo.Offset, mmInfo.Size, mm.SeriesIDSet(i.IndexIdToSeriesFileId))
+	}
+
+	// Flush data to writer.
+	nn, err := mw.WriteTo(w)
+	*n += nn
+	return err
 }
