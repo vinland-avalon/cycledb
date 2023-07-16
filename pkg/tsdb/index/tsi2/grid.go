@@ -223,7 +223,7 @@ func (g *Grid) GetSeriesIDsWithTagsNoIDSet(tags models.Tags) []uint64 {
 
 	if len(tags) == 0 {
 		g.seriesIDSet.ForEach(func(id uint64) {
-			ids = append(ids, id+g.offset)
+			ids = append(ids, id)
 		})
 		return ids
 	}

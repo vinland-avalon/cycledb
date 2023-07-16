@@ -30,6 +30,8 @@ var (
 	// indexFileBufferSize is the buffer size used when compacting the LogFile down
 	// into a .tsi file.
 	indexFileBufferSize = 1 << 17 // 128K
+
+	IndexFilePath = "./tmp"
 )
 
 type Index struct {
@@ -99,6 +101,7 @@ func (i *Index) Open() error {
 	i.IndexIdToSeriesFileId = map[uint64]uint64{}
 	// i.seriesFileIdToIndexId = map[uint64]uint64{}
 	i.opened = true
+	i.path = IndexFilePath
 	return nil
 }
 
@@ -391,10 +394,8 @@ func (i *Index) UniqueReferenceID() uintptr {
 	panic("unimplemented")
 }
 
-func (i *Index) Compact() {
+func (i *Index) Compact(id int) error {
 	start := time.Now()
-
-	id := 1
 
 	log, logEnd := logger.NewOperation(context.TODO(), i.logger, "TSI2 compaction", "tsi2_compact", zap.Int("tsi2_id", id))
 	defer logEnd()
@@ -404,27 +405,27 @@ func (i *Index) Compact() {
 	f, err := os.Create(path)
 	if err != nil {
 		log.Error("Cannot create index file", zap.Error(err))
-		return
+		return err
 	}
-	defer f.Close()
+	// defer f.Close()
 
 	// Compact index in memory to new index file.
 	lvl := tsi1.CompactionLevel{M: 1 << 25, K: 6}
 	n, err := i.CompactTo(f, lvl.M, lvl.K)
 	if err != nil {
 		log.Error("Cannot compact index", zap.Error(err))
-		return
+		return err
 	}
 
 	if err = f.Sync(); err != nil {
 		log.Error("Cannot sync index file", zap.Error(err))
-		return
+		return err
 	}
 
 	// Close file.
 	if err := f.Close(); err != nil {
 		log.Error("Cannot close index file", zap.Error(err))
-		return
+		return err
 	}
 
 	// todo(vinland):// Reopen as an index file.
@@ -435,6 +436,10 @@ func (i *Index) Compact() {
 		zap.Int64("bytes", n),
 		zap.Int("kb_per_sec", int(float64(n)/elapsed.Seconds())/1024),
 	)
+
+	// fmt.Printf("write %d byte to file\n", n)
+
+	return nil
 }
 
 // CompactTo compacts the in-memory index and writes it to w.

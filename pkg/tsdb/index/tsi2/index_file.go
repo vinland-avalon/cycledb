@@ -14,7 +14,7 @@ const FileSignature = "TSI2"
 
 // IndexFileTrailer represents meta data written to the end of the index file.
 type IndexFileTrailer struct {
-	Version int
+	// Version int
 
 	MeasurementBlock struct {
 		Offset int64
@@ -26,10 +26,10 @@ type IndexFileTrailer struct {
 	// 	Size   int64
 	// }
 
-	IndexIdToSeriesFileId struct {
-		Offset int64
-		Size   int64
-	}
+	// IndexIdToSeriesFileId struct {
+	// 	Offset int64
+	// 	Size   int64
+	// }
 
 	// TombstoneSeriesIDSet struct {
 	// 	Offset int64
@@ -56,12 +56,12 @@ func (t *IndexFileTrailer) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 
-	// Write series id set info.
-	if err := writeUint64To(w, uint64(t.IndexIdToSeriesFileId.Offset), &n); err != nil {
-		return n, err
-	} else if err := writeUint64To(w, uint64(t.IndexIdToSeriesFileId.Size), &n); err != nil {
-		return n, err
-	}
+	// // Write series id set info.
+	// if err := writeUint64To(w, uint64(t.IndexIdToSeriesFileId.Offset), &n); err != nil {
+	// 	return n, err
+	// } else if err := writeUint64To(w, uint64(t.IndexIdToSeriesFileId.Size), &n); err != nil {
+	// 	return n, err
+	// }
 
 	// // Write series id set info.
 	// if err := writeUint64To(w, uint64(t.SeriesIDSet.Offset), &n); err != nil {
@@ -170,6 +170,7 @@ type IndexFileMeasurementCompactInfo struct {
 	Offset int64
 	Size   int64
 
+	// todo(vinland): have not been compacted to measurement block
 	gridInfos []*GridCompactInfo
 }
 

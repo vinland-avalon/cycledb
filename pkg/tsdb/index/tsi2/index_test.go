@@ -2,13 +2,16 @@ package tsi2_test
 
 import (
 	"compress/gzip"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
 	"testing"
+	"time"
 
 	"cycledb/pkg/tsdb"
 	"cycledb/pkg/tsdb/index/tsi2"
@@ -733,6 +736,103 @@ func TestIndex_WriteGridBlock_MultiGrids(t *testing.T) {
 		assert.Nil(t, err)
 		assert.NotNil(t, g)
 	}
+}
+
+func TestIndex_CompactTo(t *testing.T) {
+	idx := MustOpenDefaultIndex(t) // Uses the batch series creation method CreateSeriesListIfNotExists
+	defer idx.Close()
+
+	var batchNames [][]byte
+	var batchTags []models.Tags
+	mmNames := []string{"cpu", "mem", "disk"}
+
+	for i := 0; i < 40; i++ {
+		for _, name := range mmNames {
+			batchNames = append(batchNames, []byte(name))
+			m := map[string]string{"region": fmt.Sprintf("region_%d", i), "server": fmt.Sprintf("server_%d", i)}
+			batchTags = append(batchTags, models.NewTags(m))
+		}
+	}
+
+	batchKeys := tsdb.GenerateSeriesKeys(batchNames, batchTags)
+
+	if err := idx.CreateSeriesListIfNotExists(batchKeys, batchNames, batchTags); err != nil {
+		t.Fatal(err)
+	}
+
+	// fmt.Printf("idx: %+v\n", len(idx.IndexIdToSeriesFileId))
+
+	names := idx.MeasurementNames()
+	assert.Equal(t, []string{"cpu", "disk", "mem"}, names)
+
+	id := time.Now().Nanosecond()
+
+	err := idx.Compact(id)
+	assert.Nil(t, err)
+
+	filename := filepath.Join(tsi2.IndexFilePath, tsi2.FormatIndexFileName(id, 1))
+	defer os.Remove(filename)
+
+	f, err := os.Open(filename)
+	assert.Nil(t, err)
+	fileSize := 6006
+	buf := make([]byte, fileSize)
+	cnt, err := f.ReadAt(buf, 0)
+	assert.Nil(t, err)
+	assert.Equal(t, fileSize, cnt)
+
+	var tl tsi2.IndexFileTrailer
+	tl.MeasurementBlock.Size = int64(binary.BigEndian.Uint64(buf[fileSize-10 : fileSize-2]))
+	tl.MeasurementBlock.Offset = int64(binary.BigEndian.Uint64(buf[fileSize-18 : fileSize-10]))
+	// fmt.Printf("index file trailer: %+v\n", tl)
+	assert.Equal(t, tl.MeasurementBlock.Offset, int64(5560))
+	assert.Equal(t, tl.MeasurementBlock.Size, int64(428))
+
+	// Unmarshal into a block.
+	var blk tsi2.MeasurementBlock
+	err = blk.UnmarshalBinary(buf[tl.MeasurementBlock.Offset : tl.MeasurementBlock.Offset+tl.MeasurementBlock.Size])
+	assert.Nil(t, err)
+
+	// Verify data in block.
+	if e, ok := blk.Elem([]byte("cpu")); !ok {
+		t.Fatal("expected element")
+	} else if e.GridBlockOffset() != 4 || e.GridBlockSize() != 1852 {
+		t.Fatalf("unexpected offset/size: %v/%v", e.GridBlockOffset(), e.GridBlockSize())
+		// todo(vinland): why it is 14, rather than 40?
+	} else if e.SeriesIDSet().Cardinality() != 40 {
+		t.Fatalf("unexpected series data: %#v", e.SeriesIDSet().Cardinality())
+	}
+
+	// Verify non-existent measurement doesn't exist.
+	if _, ok := blk.Elem([]byte("BAD_MEASUREMENT")); ok {
+		t.Fatal("expected no element")
+	}
+
+	// Verify data in block.
+	if e, ok := blk.Elem([]byte("mem")); !ok {
+		t.Fatal("expected element")
+	} else if e.GridBlockOffset() != 3708 || e.GridBlockSize() != 1852 {
+		t.Fatalf("unexpected offset/size: %v/%v", e.GridBlockOffset(), e.GridBlockSize())
+	} else if e.SeriesIDSet().Cardinality() != 40 {
+		t.Fatalf("unexpected series data: %#v", e.SeriesIDSet().Cardinality())
+	}
+
+	// Verify data in block.
+	if e, ok := blk.Elem([]byte("disk")); !ok {
+		t.Fatal("expected element")
+	} else if e.GridBlockOffset() != 1856 || e.GridBlockSize() != 1852 {
+		t.Fatalf("unexpected offset/size: %v/%v", e.GridBlockOffset(), e.GridBlockSize())
+	} else if e.SeriesIDSet().Cardinality() != 40 {
+		t.Fatalf("unexpected series data: %#v", e.SeriesIDSet().Cardinality())
+	}
+
+	e, _ := blk.Elem([]byte("disk"))
+
+	g, err := tsi2.DecodeGrid(buf[e.GridBlockOffset() : e.GridBlockSize()+e.GridBlockOffset()])
+	assert.Nil(t, err)
+	assert.NotNil(t, g)
+	assert.True(t, g.HasTagValue("region", "region_3"))
+	assert.False(t, g.HasTagValue("city", "city_3"))
 }
 
 var tsiditr tsdb.SeriesIDIterator

@@ -124,6 +124,23 @@ type MeasurementBlockElem struct {
 	size int
 }
 
+// Name returns the measurement name.
+func (e *MeasurementBlockElem) Name() []byte { return e.name }
+
+// TagBlockOffset returns the offset of the measurement's tag block.
+func (e *MeasurementBlockElem) GridBlockOffset() int64 { return e.gridsBlock.offset }
+
+// TagBlockSize returns the size of the measurement's tag block.
+func (e *MeasurementBlockElem) GridBlockSize() int64 { return e.gridsBlock.size }
+
+// SeriesData returns the raw series data.
+func (e *MeasurementBlockElem) SeriesData() []byte { return e.series.data }
+
+// SeriesN returns the number of series associated with the measurement.
+func (e *MeasurementBlockElem) SeriesN() uint64 { return e.series.n }
+
+func (e *MeasurementBlockElem) SeriesIDSet() *tsdb.SeriesIDSet { return e.seriesIDSet }
+
 // uvarint is a wrapper around binary.Uvarint.
 // Returns a non-nil error when binary.Uvarint returns n <= 0 or n > len(data).
 func uvarint(data []byte) (value uint64, n int, err error) {
@@ -187,13 +204,13 @@ func (e *MeasurementBlockElem) UnmarshalBinary(data []byte) error {
 // MeasurementBlockWriter writes a measurement block.
 type MeasurementBlockWriter struct {
 	buf bytes.Buffer
-	mms map[string]measurement
+	mms map[string]CompactedMeasurement
 }
 
 // NewMeasurementBlockWriter returns a new MeasurementBlockWriter.
 func NewMeasurementBlockWriter() *MeasurementBlockWriter {
 	return &MeasurementBlockWriter{
-		mms: make(map[string]measurement),
+		mms: make(map[string]CompactedMeasurement),
 	}
 }
 
@@ -280,7 +297,7 @@ func (mw *MeasurementBlockWriter) WriteTo(w io.Writer) (n int64, err error) {
 		_, v := m.Elem(i)
 
 		var offset int64
-		if mm, ok := v.(*measurement); ok {
+		if mm, ok := v.(*CompactedMeasurement); ok {
 			offset = mm.offset
 		}
 
@@ -310,7 +327,7 @@ func (mw *MeasurementBlockWriter) WriteTo(w io.Writer) (n int64, err error) {
 }
 
 // writeMeasurementTo encodes a single measurement entry into w.
-func (mw *MeasurementBlockWriter) writeMeasurementTo(w io.Writer, name []byte, mm *measurement, n *int64) error {
+func (mw *MeasurementBlockWriter) writeMeasurementTo(w io.Writer, name []byte, mm *CompactedMeasurement, n *int64) error {
 	// // Write flag & tag block offset.
 	// if err := writeUint8To(w, mm.flag(), n); err != nil {
 	// 	return err
@@ -357,7 +374,7 @@ func (mw *MeasurementBlockWriter) writeMeasurementTo(w io.Writer, name []byte, m
 	return err
 }
 
-type measurement struct {
+type CompactedMeasurement struct {
 	gridBlock struct {
 		offset int64
 		size   int64
