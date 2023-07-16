@@ -37,11 +37,11 @@ func NewGridWithSingleTags(offset uint64, tags models.Tags, tagValuesSlice []*Ta
 
 func NewGridWithKeysAndValuesSlice(offset uint64, keys []string, tagValuesSlice []*TagValues, seriesIDSet *tsdb.SeriesIDSet) *Grid {
 	g := &Grid{
-		offset: offset,
+		offset:         offset,
 		tagValuesSlice: tagValuesSlice,
-		tagKeys: keys,
+		tagKeys:        keys,
 		tagKeyToIndex:  map[string]int{},
-		seriesIDSet: seriesIDSet,
+		seriesIDSet:    seriesIDSet,
 	}
 	for i, key := range keys {
 		g.tagKeyToIndex[key] = i

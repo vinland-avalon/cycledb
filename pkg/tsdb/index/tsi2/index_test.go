@@ -672,7 +672,7 @@ func TestIndex_WriteGridBlock(t *testing.T) {
 	assert.NotEqual(t, cnt, 0)
 
 	for _, mm := range info.Mms {
-		g, err := tsi2.DecodeGrid(buf[mm.Offset:mm.Size+mm.Offset])
+		g, err := tsi2.DecodeGrid(buf[mm.Offset : mm.Size+mm.Offset])
 		assert.Nil(t, err)
 		assert.NotNil(t, g)
 	}
@@ -729,7 +729,7 @@ func TestIndex_WriteGridBlock_MultiGrids(t *testing.T) {
 	assert.NotEqual(t, cnt, 0)
 
 	for _, mm := range info.Mms {
-		g, err := tsi2.DecodeGrid(buf[mm.Offset:mm.Size+mm.Offset])
+		g, err := tsi2.DecodeGrid(buf[mm.Offset : mm.Size+mm.Offset])
 		assert.Nil(t, err)
 		assert.NotNil(t, g)
 	}
