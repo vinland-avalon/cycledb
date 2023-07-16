@@ -684,6 +684,57 @@ func TestIndex_WriteGridBlock(t *testing.T) {
 	// fmt.Printf("grid in file: %+v", g)
 }
 
+func TestIndex_WriteGridBlock_MultiGrids(t *testing.T) {
+	idx := MustOpenDefaultIndex(t) // Uses the batch series creation method CreateSeriesListIfNotExists
+	defer idx.Close()
+
+	var batchNames [][]byte
+	var batchTags []models.Tags
+	name := "cpu"
+
+	for i := 0; i < 40; i++ {
+		batchNames = append(batchNames, []byte(name))
+		m := map[string]string{"region": fmt.Sprintf("region_%d", i), "server": fmt.Sprintf("server_%d", i)}
+		batchTags = append(batchTags, models.NewTags(m))
+	}
+
+	batchKeys := tsdb.GenerateSeriesKeys(batchNames, batchTags)
+
+	if err := idx.CreateSeriesListIfNotExists(batchKeys, batchNames, batchTags); err != nil {
+		t.Fatal(err)
+	}
+
+	f, err := os.CreateTemp("./", "write_grid_block_test_")
+	if err != nil {
+		panic(fmt.Sprintf("failed to create temp file: %v", err))
+	}
+	t.Cleanup(func() {
+		f.Close()
+		os.Remove(f.Name())
+	})
+
+	names := idx.MeasurementNames()
+	assert.Equal(t, []string{"cpu"}, names)
+
+	n := int64(0)
+	info := tsi2.NewIndexFileCompactInfo()
+	err = idx.WriteGridBlockTo(f, names, info, &n)
+	assert.Nil(t, err)
+	// fmt.Printf("info:\n %+v\n", info.Show())
+	assert.Equal(t, len(info.Mms), 1)
+
+	buf := make([]byte, 1852)
+	cnt, err := f.ReadAt(buf, 0)
+	assert.Equal(t, err, nil)
+	assert.NotEqual(t, cnt, 0)
+
+	for _, mm := range info.Mms {
+		g, err := tsi2.DecodeGrid(buf[mm.Offset:mm.Size+mm.Offset])
+		assert.Nil(t, err)
+		assert.NotNil(t, g)
+	}
+}
+
 var tsiditr tsdb.SeriesIDIterator
 
 func BenchmarkIndex_IndexFile_TagValueSeriesIDIterator(b *testing.B) {
