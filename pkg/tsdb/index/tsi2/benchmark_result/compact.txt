@@ -1,0 +1,25 @@
+goos: linux
+goarch: amd64
+pkg: cycledb/pkg/tsdb/index/tsi2
+cpu: 12th Gen Intel(R) Core(TM) i5-12500H
+BenchmarkLogFile_WriteTo
+BenchmarkLogFile_WriteTo/tagValueNum=11
+    /home/bohan_wu_ubuntu/cycledb/pkg/tsdb/index/tsi2/index_file_test.go:56: sz=40041b
+    /home/bohan_wu_ubuntu/cycledb/pkg/tsdb/index/tsi2/index_file_test.go:56: sz=40041b
+    /home/bohan_wu_ubuntu/cycledb/pkg/tsdb/index/tsi2/index_file_test.go:56: sz=40041b
+BenchmarkLogFile_WriteTo/tagValueNum=11-16         	     902	   1265454 ns/op	  991471 B/op	     882 allocs/op
+PASS
+ok  	cycledb/pkg/tsdb/index/tsi2	156.472s
+
+
+
+goos: linux
+goarch: amd64
+pkg: cycledb/pkg/tsdb/index/tsi1
+cpu: 12th Gen Intel(R) Core(TM) i5-12500H
+BenchmarkLogFile_WriteTo_FullPermutation
+BenchmarkLogFile_WriteTo_FullPermutation/tagKeyNum=4,_tagValueNum=11
+    /home/bohan_wu_ubuntu/cycledb/pkg/tsdb/index/tsi1/log_file_test.go:592: sz=165051b
+    /home/bohan_wu_ubuntu/cycledb/pkg/tsdb/index/tsi1/log_file_test.go:592: sz=165051b
+    /home/bohan_wu_ubuntu/cycledb/pkg/tsdb/index/tsi1/log_file_test.go:592: sz=165051b
+BenchmarkLogFile_WriteTo_FullPermutation/tagKeyNum=4,_tagValueNum=11-16         	      98	  12418794 ns/op	 6577861 B/op	   47010 allocs/op

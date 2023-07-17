@@ -5,15 +5,15 @@ import (
 	"io"
 )
 
-type GridBlock struct {
-	data []byte
+// type GridBlock struct {
+// 	data []byte
 
-	gridData []byte
-	// keyData   []byte
-	// hashData  []byte
+// 	gridData []byte
+// 	// keyData   []byte
+// 	// hashData  []byte
 
-	version int // tag block version
-}
+// 	version int // tag block version
+// }
 
 // GridBlockEncoder encodes a grid to a GridBlock section.
 type GridBlockEncoder struct {
@@ -89,19 +89,19 @@ func (enc *GridBlockEncoder) EncodeGrid(g *Grid) error {
 	return nil
 }
 
-// ensureHeaderWritten writes a single byte to offset the rest of the block.
-func (enc *GridBlockEncoder) ensureHeaderWritten() error {
-	if enc.n > 0 {
-		return nil
-	} else if _, err := enc.w.Write([]byte{0}); err != nil {
-		return err
-	}
+// // ensureHeaderWritten writes a single byte to offset the rest of the block.
+// func (enc *GridBlockEncoder) ensureHeaderWritten() error {
+// 	if enc.n > 0 {
+// 		return nil
+// 	} else if _, err := enc.w.Write([]byte{0}); err != nil {
+// 		return err
+// 	}
 
-	enc.n++
-	// enc.trailer.ValueData.Offset = enc.n
+// 	enc.n++
+// 	// enc.trailer.ValueData.Offset = enc.n
 
-	return nil
-}
+// 	return nil
+// }
 
 type GridBlockTrailer struct {
 }

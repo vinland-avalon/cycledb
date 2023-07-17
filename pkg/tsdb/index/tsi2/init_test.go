@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	generator "cycledb/pkg/tsdb/index/tsi2/tag_pairs_generator"
+	generator "cycledb/pkg/tsdb/index/tag_pairs_generator"
 
 	"github.com/influxdata/influxdb/v2/models"
 )

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"cycledb/pkg/tsdb"
+	generator "cycledb/pkg/tsdb/index/tag_pairs_generator"
 	"cycledb/pkg/tsdb/index/tsi1"
 
 	"github.com/influxdata/influxdb/v2/models"
@@ -542,6 +543,55 @@ func BenchmarkLogFile_WriteTo(b *testing.B) {
 					b.Fatal(err)
 				}
 				b.Logf("sz=%db", buf.Len())
+			}
+		})
+	}
+}
+
+func BenchmarkLogFile_WriteTo_FullPermutation(b *testing.B) {
+	tmp_gen := generator.FullPermutationGen{}
+	tagKeyNum := 4
+	for _, tagValueNum := range []int{11} {
+		name := fmt.Sprintf("tagKeyNum=%d, tagValueNum=%d", tagKeyNum, tagValueNum)
+		b.Run(name, func(b *testing.B) {
+			sfile := MustOpenSeriesFile(b)
+			defer sfile.Close()
+
+			f := MustOpenLogFile(sfile.SeriesFile)
+			defer f.Close()
+			seriesSet := tsdb.NewSeriesIDSet()
+
+			tagsSlice := tmp_gen.GenerateInsertTagsSlice(tagKeyNum, tagValueNum)
+
+
+			// Estimate bloom filter size.
+			m, k := bloom.Estimate(uint64(len(tagsSlice)), 0.02)
+
+			// Initialize log file with series data.
+			for i := 0; i < len(tagsSlice); i++ {
+				if _, err := f.AddSeriesList(
+					seriesSet,
+					[][]byte{[]byte("test")},
+					[]models.Tags{tagsSlice[i]},
+				); err != nil {
+					b.Fatal(err)
+				}
+			}
+			b.ResetTimer()
+
+			// Create cpu profile for each subtest.
+			MustStartCPUProfile(name)
+			defer pprof.StopCPUProfile()
+
+			// Compact log file.
+			for i := 0; i < b.N; i++ {
+				buf := bytes.NewBuffer(make([]byte, 0, 10*len(tagsSlice)))
+				if _, err := f.CompactTo(buf, m, k, nil); err != nil {
+					b.Fatal(err)
+				}
+				if i == 0 {
+					b.Logf("sz=%db", buf.Len())
+				}
 			}
 		})
 	}

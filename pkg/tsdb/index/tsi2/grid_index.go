@@ -42,7 +42,7 @@ func (gi *GridIndex) GetSeriesIDsForTags(tags models.Tags) *tsdb.SeriesIDSet {
 // GetStrictlyMatchedSeriesIDForTags: each dimension must match strictly, or return -1
 func (gi *GridIndex) GetStrictlyMatchedSeriesIDForTags(tags models.Tags) (uint64, bool) {
 	for _, grid := range gi.grids {
-		id, ok := grid.GetStrictlyMatchedIDForTagsNoIDSet(tags)
+		id, ok := grid.GetStrictlyMatchedIDForTags(tags)
 		if ok {
 			return id, true
 		}

@@ -183,7 +183,6 @@ func (i *Index) CreateSeriesListIfNotExists(keys, names [][]byte, tagsSlice []mo
 			if !exist {
 				i.measurements.AppendMeasurement(names[index])
 			}
-			// todo(vinland): use model.tags for set function directly
 			id, success := i.measurements.SetTags(names[index], tagsSlice[index])
 			if !success {
 				continue
@@ -576,7 +575,7 @@ func (i *Index) WriteMeasurementBlockTo(w io.Writer, names []string, info *Index
 		mm, err := i.measurements.MeasurementByName([]byte(name))
 		if err != nil {
 			return ErrMeasurementNotFound
-		}	
+		}
 		mmInfo := info.Mms[name]
 		if mmInfo == nil {
 			return ErrMeasurementNotFound
