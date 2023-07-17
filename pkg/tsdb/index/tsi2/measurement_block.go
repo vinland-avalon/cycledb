@@ -113,6 +113,11 @@ type MeasurementBlockElem struct {
 		size   int64
 	}
 
+	grids []struct {
+		offset int64
+		size   int64
+	}
+
 	series struct {
 		n    uint64 // series count
 		data []byte // serialized series data
@@ -161,6 +166,16 @@ func (e *MeasurementBlockElem) UnmarshalBinary(data []byte) error {
 	// Parse tag block offset.
 	e.gridsBlock.offset, data = int64(binary.BigEndian.Uint64(data)), data[8:]
 	e.gridsBlock.size, data = int64(binary.BigEndian.Uint64(data)), data[8:]
+
+	// Parse each grid
+	gridsNum, data := int64(binary.BigEndian.Uint64(data)), data[8:]
+	var offset int64
+	var size int64
+	for i := int64(0); i < gridsNum; i++ {
+		offset, data = int64(binary.BigEndian.Uint64(data)), data[8:]
+		size, data = int64(binary.BigEndian.Uint64(data)), data[8:]
+		e.grids = append(e.grids, struct{offset int64; size int64}{offset: offset, size: size})
+	}
 
 	// Parse name.
 	sz, n, err := uvarint(data)
@@ -215,10 +230,20 @@ func NewMeasurementBlockWriter() *MeasurementBlockWriter {
 }
 
 // Add adds a measurement with series and tag set offset/size.
-func (mw *MeasurementBlockWriter) Add(name []byte, offset, size int64, seriesIDSet *tsdb.SeriesIDSet) {
+func (mw *MeasurementBlockWriter) Add(name []byte, mmInfo *IndexFileMeasurementCompactInfo, seriesIDSet *tsdb.SeriesIDSet) {
 	mm := mw.mms[string(name)]
-	mm.gridBlock.offset = offset
-	mm.gridBlock.size = size
+	mm.gridBlock.offset = mmInfo.Offset
+	mm.gridBlock.size = mmInfo.Size
+
+	for _, grid := range mmInfo.gridInfos {
+		mm.grids = append(mm.grids, struct {
+			offset int64
+			size   int64
+		}{
+			offset: grid.offset,
+			size:   grid.size,
+		})
+	}
 
 	if mm.seriesIDSet == nil {
 		mm.seriesIDSet = tsdb.NewSeriesIDSet()
@@ -338,6 +363,19 @@ func (mw *MeasurementBlockWriter) writeMeasurementTo(w io.Writer, name []byte, m
 		return err
 	}
 
+	// Write meta data for each grid
+	if err := writeUint64To(w, uint64(len(mm.grids)), n); err != nil {
+		return err
+	} else {
+		for _, grid := range mm.grids {
+			if err := writeUint64To(w, uint64(grid.offset), n); err != nil {
+				return err
+			} else if err := writeUint64To(w, uint64(grid.size), n); err != nil {
+				return err
+			}
+		}
+	}
+
 	// Write measurement name.
 	if err := writeUvarintTo(w, uint64(len(name)), n); err != nil {
 		return err
@@ -376,6 +414,10 @@ func (mw *MeasurementBlockWriter) writeMeasurementTo(w io.Writer, name []byte, m
 
 type CompactedMeasurement struct {
 	gridBlock struct {
+		offset int64
+		size   int64
+	}
+	grids []struct {
 		offset int64
 		size   int64
 	}

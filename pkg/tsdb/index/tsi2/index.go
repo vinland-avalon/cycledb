@@ -581,7 +581,7 @@ func (i *Index) WriteMeasurementBlockTo(w io.Writer, names []string, info *Index
 		if mmInfo == nil {
 			return ErrMeasurementNotFound
 		}
-		mw.Add([]byte(mm.name), mmInfo.Offset, mmInfo.Size, mm.SeriesIDSet(i.IndexIdToSeriesFileId))
+		mw.Add([]byte(mm.name), mmInfo, mm.SeriesIDSet(i.IndexIdToSeriesFileId))
 	}
 
 	// Flush data to writer.

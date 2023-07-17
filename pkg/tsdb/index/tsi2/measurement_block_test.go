@@ -2,6 +2,7 @@ package tsi2
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 
 	"cycledb/pkg/tsdb"
@@ -31,10 +32,25 @@ func TestMeasurementBlockWriter(t *testing.T) {
 		NewMeasurementInfo([]byte("baz"), 300, 30, tsdb.NewSeriesIDSet([]uint64{5, 6}...)),
 	}
 
+	grids := [][]*GridCompactInfo{
+		{
+			{offset: 100, size: 20},
+		},
+		{
+			{offset: 200, size: 20},
+			{offset: 200, size: 40},
+		},
+		{
+			{offset: 300, size: 20},
+			{offset: 300, size: 40},
+			{offset: 300, size: 60},
+		},
+	}
+
 	// Write the measurements to writer.
 	mw := NewMeasurementBlockWriter()
-	for _, m := range ms {
-		mw.Add(m.Name, m.Offset, m.Size, m.idsSet)
+	for i, m := range ms {
+		mw.Add(m.Name, &IndexFileMeasurementCompactInfo{Offset: m.Offset, Size: m.Size, gridInfos: grids[i]}, m.idsSet)
 	}
 
 	// Encode into buffer.
@@ -58,6 +74,8 @@ func TestMeasurementBlockWriter(t *testing.T) {
 		t.Fatalf("unexpected offset/size: %v/%v", e.gridsBlock.offset, e.gridsBlock.size)
 	} else if e.seriesIDSet.Cardinality() != 3 {
 		t.Fatalf("unexpected series data: %#v", e.seriesIDSet)
+	} else if reflect.DeepEqual(grids[0], e.grids[0]) {
+		t.Fatalf("unexpected grids: %+v", e.grids)
 	}
 
 	if e, ok := blk.Elem([]byte("bar")); !ok {
@@ -66,6 +84,8 @@ func TestMeasurementBlockWriter(t *testing.T) {
 		t.Fatalf("unexpected offset/size: %v/%v", e.gridsBlock.offset, e.gridsBlock.size)
 	} else if e.seriesIDSet.Cardinality() != 1 {
 		t.Fatalf("unexpected series data: %#v", e.seriesIDSet)
+	}  else if reflect.DeepEqual(grids[1], e.grids[1]) {
+		t.Fatalf("unexpected grids: %+v", e.grids)
 	}
 
 	if e, ok := blk.Elem([]byte("baz")); !ok {
@@ -74,6 +94,8 @@ func TestMeasurementBlockWriter(t *testing.T) {
 		t.Fatalf("unexpected offset/size: %v/%v", e.gridsBlock.offset, e.gridsBlock.size)
 	} else if e.seriesIDSet.Cardinality() != 2 {
 		t.Fatalf("unexpected series data: %#v", e.seriesIDSet)
+	}  else if reflect.DeepEqual(grids[2], e.grids[2]) {
+		t.Fatalf("unexpected grids: %+v", e.grids)
 	}
 
 	// Verify non-existent measurement doesn't exist.

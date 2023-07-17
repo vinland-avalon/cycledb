@@ -21,6 +21,18 @@ func TestSizeOfData(t *testing.T) {
 	assert.Equal(t, len(s), len([]byte(s)))
 }
 
+func DecodeGrids(buf []byte, e MeasurementBlockElem) ([]*Grid, error) {
+	grids := make([]*Grid, 0, len(e.grids))
+	for _, gridInfo := range e.grids {
+		grid, err := DecodeGrid(buf[gridInfo.offset : gridInfo.offset+gridInfo.size])
+		if err != nil {
+			return nil, err
+		}
+		grids = append(grids, grid)
+	}
+	return grids, nil
+}
+
 func DecodeGrid(buf []byte) (*Grid, error) {
 	offset, buf := uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
 
