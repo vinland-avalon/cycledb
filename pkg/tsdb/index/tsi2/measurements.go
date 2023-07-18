@@ -24,20 +24,20 @@ func NewMeasurement(i *GridIndex, name string, measurementId uint64) *Measuremen
 
 func (m *Measurement) SeriesIDSet(mp map[uint64]uint64) *tsdb.SeriesIDSet {
 	idsSet := m.gIndex.SeriesIDSet()
+	resSet := tsdb.NewSeriesIDSet()
 	idsSet.ForEach(func(id uint64) {
-		idsSet.Remove(id)
-		idsSet.Add(mp[SeriesIdWithMeasurementId(m.measurementId, id)])
+		resSet.Add(mp[SeriesIdWithMeasurementId(m.measurementId, id)])
 	})
-	return idsSet
+	return resSet
 }
 
 func (m *Measurement) SeriesIDSetForTagKey(key []byte, mp map[uint64]uint64) *tsdb.SeriesIDSet {
 	idsSet := m.gIndex.SeriesIDSetForTagKey(string(key))
+	resSet := tsdb.NewSeriesIDSet()
 	idsSet.ForEach(func(id uint64) {
-		idsSet.Remove(id)
-		idsSet.Add(mp[SeriesIdWithMeasurementId(m.measurementId, id)])
+		resSet.Add(mp[SeriesIdWithMeasurementId(m.measurementId, id)])
 	})
-	return idsSet
+	return resSet
 }
 
 func (m *Measurement) SeriesIDSetForTagValue(key, value []byte, mp map[uint64]uint64) *tsdb.SeriesIDSet {

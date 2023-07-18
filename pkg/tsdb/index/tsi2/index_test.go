@@ -2,13 +2,17 @@ package tsi2_test
 
 import (
 	"compress/gzip"
+	"encoding/binary"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
 	"testing"
+	"time"
 
 	"cycledb/pkg/tsdb"
 	"cycledb/pkg/tsdb/index/tsi2"
@@ -607,6 +611,199 @@ func TestIndex_TagValueSeriesIDIterator(t *testing.T) {
 	t.Run("no matching series", func(t *testing.T) {
 		testTagValueSeriesIDIterator(t, "foo", "bar", "zoo", nil)
 	})
+}
+
+func TestIndex_WriteGridBlock(t *testing.T) {
+	idx := MustOpenDefaultIndex(t) // Uses the batch series creation method CreateSeriesListIfNotExists
+	defer idx.Close()
+
+	// Add some series.
+	data := []struct {
+		Key  string
+		Name string
+		Tags map[string]string
+	}{
+		{"cpu,region=west,server=a", "cpu", map[string]string{"region": "west", "server": "a"}},
+		{"cpu,region=west,server=b", "cpu", map[string]string{"region": "west", "server": "b"}},
+		{"cpu,region=east,server=a", "cpu", map[string]string{"region": "east", "server": "a"}},
+		{"cpu,region=north,server=c", "cpu", map[string]string{"region": "north", "server": "c"}},
+		{"cpu,region=south,server=s", "cpu", map[string]string{"region": "south", "server": "s"}},
+		{"mem,region=west,server=a", "mem", map[string]string{"region": "west", "server": "a"}},
+		{"mem,region=west,server=b", "mem", map[string]string{"region": "west", "server": "b"}},
+		{"mem,region=west,server=c", "mem", map[string]string{"region": "west", "server": "c"}},
+		{"disk,region=east,server=a", "disk", map[string]string{"region": "east", "server": "a"}},
+		{"disk,region=east,server=a", "disk", map[string]string{"region": "east", "server": "a"}},
+		{"disk,region=north,server=c", "disk", map[string]string{"region": "north", "server": "c"}},
+	}
+
+	var batchKeys [][]byte
+	var batchNames [][]byte
+	var batchTags []models.Tags
+	for _, pt := range data {
+		batchKeys = append(batchKeys, []byte(pt.Key))
+		batchNames = append(batchNames, []byte(pt.Name))
+		batchTags = append(batchTags, models.NewTags(pt.Tags))
+	}
+
+	if err := idx.CreateSeriesListIfNotExists(batchKeys, batchNames, batchTags); err != nil {
+		t.Fatal(err)
+	}
+
+	f, err := os.CreateTemp("./", "write_grid_block_test_")
+	if err != nil {
+		panic(fmt.Sprintf("failed to create temp file: %v", err))
+	}
+	t.Cleanup(func() {
+		f.Close()
+		os.Remove(f.Name())
+	})
+
+	// bw := bufio.NewWriterSize(f, 1<<17) // 128K
+
+	names := idx.MeasurementNames()
+	assert.Equal(t, []string{"cpu", "disk", "mem"}, names)
+
+	n := int64(0)
+	info := tsi2.NewIndexFileCompactInfo()
+	err = idx.WriteGridBlockTo(f, names, info, &n)
+	assert.Nil(t, err)
+	// fmt.Printf("info:\n %+v\n", info.Show())
+	assert.Equal(t, len(info.Mms), 3)
+
+	f.Close()
+	f, err = os.Open(f.Name())
+	assert.Nil(t, err)
+
+	buf, err := ioutil.ReadAll(f)
+	assert.Nil(t, err)
+	assert.Greater(t, len(buf), 0)
+
+	for _, mm := range info.Mms {
+		g, err := tsi2.DecodeGrid(buf[mm.Offset : mm.Size+mm.Offset])
+		assert.Nil(t, err)
+		assert.NotNil(t, g)
+	}
+
+	// g, err := tsi2.DecodeGrid(buf[0:204])
+	// g, err := tsi2.DecodeGrid(buf[204:359])
+	// g, err := tsi2.DecodeGrid(buf[359:512])
+	// assert.Nil(t, err)
+	// fmt.Printf("grid in file: %+v", g)
+}
+
+func TestIndex_WriteGridBlock_MultiGrids(t *testing.T) {
+	idx := MustOpenDefaultIndex(t) // Uses the batch series creation method CreateSeriesListIfNotExists
+	defer idx.Close()
+
+	var batchNames [][]byte
+	var batchTags []models.Tags
+	name := "cpu"
+
+	for i := 0; i < 40; i++ {
+		batchNames = append(batchNames, []byte(name))
+		m := map[string]string{"region": fmt.Sprintf("region_%d", i), "server": fmt.Sprintf("server_%d", i)}
+		batchTags = append(batchTags, models.NewTags(m))
+	}
+
+	batchKeys := tsdb.GenerateSeriesKeys(batchNames, batchTags)
+
+	if err := idx.CreateSeriesListIfNotExists(batchKeys, batchNames, batchTags); err != nil {
+		t.Fatal(err)
+	}
+
+	f, err := os.CreateTemp("./", "write_grid_block_test_")
+	if err != nil {
+		panic(fmt.Sprintf("failed to create temp file: %v", err))
+	}
+	t.Cleanup(func() {
+		f.Close()
+		os.Remove(f.Name())
+	})
+
+	names := idx.MeasurementNames()
+	assert.Equal(t, []string{"cpu"}, names)
+
+	n := int64(0)
+	info := tsi2.NewIndexFileCompactInfo()
+	err = idx.WriteGridBlockTo(f, names, info, &n)
+	assert.Nil(t, err)
+	// fmt.Printf("info:\n %+v\n", info.Show())
+	assert.Equal(t, len(info.Mms), 1)
+
+	f.Close()
+	f, err = os.Open(f.Name())
+	assert.Nil(t, err)
+
+	buf, err := ioutil.ReadAll(f)
+	assert.Nil(t, err)
+	assert.Greater(t, len(buf), 0)
+
+	for _, mm := range info.Mms {
+		g, err := tsi2.DecodeGrid(buf[mm.Offset : mm.Size+mm.Offset])
+		assert.Nil(t, err)
+		assert.NotNil(t, g)
+	}
+}
+
+func TestIndex_CompactTo(t *testing.T) {
+	idx := MustOpenDefaultIndex(t) // Uses the batch series creation method CreateSeriesListIfNotExists
+	defer idx.Close()
+
+	var batchNames [][]byte
+	var batchTags []models.Tags
+	mmNames := []string{"cpu", "mem", "disk"}
+
+	for i := 0; i < 40; i++ {
+		for _, name := range mmNames {
+			batchNames = append(batchNames, []byte(name))
+			m := map[string]string{"region": fmt.Sprintf("region_%d", i), "server": fmt.Sprintf("server_%d", i)}
+			batchTags = append(batchTags, models.NewTags(m))
+		}
+	}
+
+	batchKeys := tsdb.GenerateSeriesKeys(batchNames, batchTags)
+
+	if err := idx.CreateSeriesListIfNotExists(batchKeys, batchNames, batchTags); err != nil {
+		t.Fatal(err)
+	}
+
+	// fmt.Printf("idx: %+v\n", len(idx.IndexIdToSeriesFileId))
+
+	names := idx.MeasurementNames()
+	assert.Equal(t, []string{"cpu", "disk", "mem"}, names)
+
+	id := time.Now().Nanosecond()
+
+	err := idx.Compact(id)
+	assert.Nil(t, err)
+
+	filename := filepath.Join(tsi2.IndexFilePath, tsi2.FormatIndexFileName(id, 1))
+	defer os.Remove(filename)
+
+	buf, err := ioutil.ReadFile(filename)
+	assert.Nil(t, err)
+	fileSize := len(buf)
+
+	var tl tsi2.IndexFileTrailer
+	tl.MeasurementBlock.Size = int64(binary.BigEndian.Uint64(buf[fileSize-10 : fileSize-2]))
+	tl.MeasurementBlock.Offset = int64(binary.BigEndian.Uint64(buf[fileSize-18 : fileSize-10]))
+	// fmt.Printf("index file trailer: %+v\n", tl)
+	// assert.Equal(t, tl.MeasurementBlock.Offset, int64(5560))
+	// assert.Equal(t, tl.MeasurementBlock.Size, int64(644))
+
+	// Unmarshal into a block.
+	var blk tsi2.MeasurementBlock
+	err = blk.UnmarshalBinary(buf[tl.MeasurementBlock.Offset : tl.MeasurementBlock.Offset+tl.MeasurementBlock.Size])
+	assert.Nil(t, err)
+
+	e, ok := blk.Elem([]byte("disk"))
+	assert.True(t, ok)
+
+	grids, err := tsi2.DecodeGrids(buf, e)
+	assert.Nil(t, err)
+	assert.Greater(t, len(grids), 0)
+	assert.True(t, grids[0].HasTagValue("region", "region_3"))
+	assert.False(t, grids[0].HasTagValue("city", "city_3"))
 }
 
 var tsiditr tsdb.SeriesIDIterator

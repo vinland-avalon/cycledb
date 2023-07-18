@@ -42,7 +42,7 @@ func (gi *GridIndex) GetSeriesIDsForTags(tags models.Tags) *tsdb.SeriesIDSet {
 // GetStrictlyMatchedSeriesIDForTags: each dimension must match strictly, or return -1
 func (gi *GridIndex) GetStrictlyMatchedSeriesIDForTags(tags models.Tags) (uint64, bool) {
 	for _, grid := range gi.grids {
-		id, ok := grid.GetStrictlyMatchedIDForTagsNoIDSet(tags)
+		id, ok := grid.GetStrictlyMatchedIDForTags(tags)
 		if ok {
 			return id, true
 		}
@@ -154,7 +154,7 @@ func (gi *GridIndex) NewTagValueIterator(key string) *TagValueIterator {
 
 func (gi *GridIndex) SeriesIDSet() *tsdb.SeriesIDSet {
 	gi.mu.RLock()
-	defer gi.mu.Unlock()
+	defer gi.mu.RUnlock()
 	idsSet := tsdb.NewSeriesIDSet()
 	for _, g := range gi.grids {
 		idsSet.MergeInPlace(g.GetSeriesIDSetForTags(nil))
@@ -164,7 +164,7 @@ func (gi *GridIndex) SeriesIDSet() *tsdb.SeriesIDSet {
 
 func (gi *GridIndex) SeriesIDSetForTagKey(key string) *tsdb.SeriesIDSet {
 	gi.mu.RLock()
-	defer gi.mu.Unlock()
+	defer gi.mu.RUnlock()
 	idsSet := tsdb.NewSeriesIDSet()
 	for _, g := range gi.grids {
 		if g.HasTagKey(key) {
