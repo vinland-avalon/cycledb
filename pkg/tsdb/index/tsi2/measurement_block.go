@@ -174,7 +174,10 @@ func (e *MeasurementBlockElem) UnmarshalBinary(data []byte) error {
 	for i := int64(0); i < gridsNum; i++ {
 		offset, data = int64(binary.BigEndian.Uint64(data)), data[8:]
 		size, data = int64(binary.BigEndian.Uint64(data)), data[8:]
-		e.grids = append(e.grids, struct{offset int64; size int64}{offset: offset, size: size})
+		e.grids = append(e.grids, struct {
+			offset int64
+			size   int64
+		}{offset: offset, size: size})
 	}
 
 	// Parse name.

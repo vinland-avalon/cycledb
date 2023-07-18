@@ -1,25 +1,17 @@
 package tsi2
 
 import (
-	"bytes"
-	"cycledb/pkg/tsdb"
 	"encoding/binary"
 	"fmt"
 	"os"
 	"reflect"
 	"testing"
 
-	// "cycledb/pkg/tsdb/index/tsi2"
-
 	"github.com/influxdata/influxdb/v2/models"
 	"github.com/influxdata/influxdb/v2/pkg/testing/assert"
-)
 
-func TestSizeOfData(t *testing.T) {
-	s := "string"
-	assert.Equal(t, len(s), 6)
-	assert.Equal(t, len(s), len([]byte(s)))
-}
+	"cycledb/pkg/tsdb"
+)
 
 func DecodeGrids(buf []byte, e MeasurementBlockElem) ([]*Grid, error) {
 	grids := make([]*Grid, 0, len(e.grids))
@@ -124,48 +116,4 @@ func TestEncodeGrid(t *testing.T) {
 	assert.Equal(t, reflect.DeepEqual(grid.tagValuesSlice, g.tagValuesSlice), true)
 	assert.Equal(t, grid.seriesIDSet.Cardinality(), g.seriesIDSet.Cardinality())
 	// assert.Equal(t, reflect.DeepEqual(grid, g), true)
-}
-
-// func TestWriter(t *testing.T) {
-// 	f, err := os.CreateTemp("./", "encodetest_")
-// 	if err != nil {
-// 		panic(fmt.Sprintf("failed to create temp file: %v", err))
-// 	}
-// 	t.Cleanup(func() {
-// 		f.Close()
-// 		os.Remove(f.Name())
-// 	})
-// 	n := int64(0)
-// 	err = writeUint64To(f, uint64(1), &n)
-// 	assert.Equal(t, err, nil)
-// 	assert.Equal(t, n, int64(8))
-
-// 	buf := make([]byte, 8)
-// 	num, err := f.ReadAt(buf, 0)
-// 	assert.Equal(t, err, nil)
-// 	assert.Equal(t, num, 8)
-// }
-
-func TestSeriesIDSet(t *testing.T) {
-	var buf bytes.Buffer
-
-	ss := tsdb.NewSeriesIDSet(16)
-	n, err := ss.WriteTo(&buf)
-
-	assert.NotEqual(t, n, 0)
-	assert.Equal(t, err, nil)
-
-	sss := tsdb.NewSeriesIDSet()
-	sss.UnmarshalBinaryUnsafe(buf.Bytes())
-
-	assert.Equal(t, sss.Cardinality(), uint64(1))
-	// assert.Equal(t, reflect.DeepEqual(ss, sss), true)
-}
-
-func TestSeriesIDSet2(t *testing.T) {
-	ss := tsdb.NewSeriesIDSet(16)
-
-	sss := tsdb.NewSeriesIDSet(16)
-
-	assert.Equal(t, reflect.DeepEqual(ss, sss), true)
 }

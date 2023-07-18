@@ -551,7 +551,7 @@ func BenchmarkLogFile_WriteTo(b *testing.B) {
 func BenchmarkLogFile_WriteTo_FullPermutation(b *testing.B) {
 	tmp_gen := generator.FullPermutationGen{}
 	tagKeyNum := 4
-	for _, tagValueNum := range []int{11} {
+	for _, tagValueNum := range []int{14} {
 		name := fmt.Sprintf("tagKeyNum=%d, tagValueNum=%d", tagKeyNum, tagValueNum)
 		b.Run(name, func(b *testing.B) {
 			sfile := MustOpenSeriesFile(b)
@@ -562,7 +562,6 @@ func BenchmarkLogFile_WriteTo_FullPermutation(b *testing.B) {
 			seriesSet := tsdb.NewSeriesIDSet()
 
 			tagsSlice := tmp_gen.GenerateInsertTagsSlice(tagKeyNum, tagValueNum)
-
 
 			// Estimate bloom filter size.
 			m, k := bloom.Estimate(uint64(len(tagsSlice)), 0.02)

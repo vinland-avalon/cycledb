@@ -13,7 +13,7 @@ import (
 func BenchmarkLogFile_WriteTo(b *testing.B) {
 	tmp_gen := generators[FPGen]
 	tagKeyNum := 4
-	for _, tagValueNum := range []int{11} {
+	for _, tagValueNum := range []int{14} {
 		name := fmt.Sprintf("tagKeyNum=%d, tagValueNum=%d", tagKeyNum, tagValueNum)
 		b.Run(name, func(b *testing.B) {
 			idx := MustOpenDefaultIndex(b)

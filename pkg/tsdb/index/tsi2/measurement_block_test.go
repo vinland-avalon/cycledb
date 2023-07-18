@@ -84,7 +84,7 @@ func TestMeasurementBlockWriter(t *testing.T) {
 		t.Fatalf("unexpected offset/size: %v/%v", e.gridsBlock.offset, e.gridsBlock.size)
 	} else if e.seriesIDSet.Cardinality() != 1 {
 		t.Fatalf("unexpected series data: %#v", e.seriesIDSet)
-	}  else if reflect.DeepEqual(grids[1], e.grids[1]) {
+	} else if reflect.DeepEqual(grids[1], e.grids[1]) {
 		t.Fatalf("unexpected grids: %+v", e.grids)
 	}
 
@@ -94,7 +94,7 @@ func TestMeasurementBlockWriter(t *testing.T) {
 		t.Fatalf("unexpected offset/size: %v/%v", e.gridsBlock.offset, e.gridsBlock.size)
 	} else if e.seriesIDSet.Cardinality() != 2 {
 		t.Fatalf("unexpected series data: %#v", e.seriesIDSet)
-	}  else if reflect.DeepEqual(grids[2], e.grids[2]) {
+	} else if reflect.DeepEqual(grids[2], e.grids[2]) {
 		t.Fatalf("unexpected grids: %+v", e.grids)
 	}
 

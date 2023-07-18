@@ -28,7 +28,7 @@ func (g *FullPermutationGen) GenerateQueryTagsSlice(tagKeyNum, tagValueNum int) 
 
 func (g *FullPermutationGen) generate(tagKeyNum, tagValueNum int) []models.Tags {
 	tags := models.Tags{}
-	for i := 0; i< tagKeyNum; i++ {
+	for i := 0; i < tagKeyNum; i++ {
 		tags = append(tags, models.NewTag([]byte(fmt.Sprintf("%c", 'a'+i)), []byte("0")))
 	}
 	tagsSlice := make([]models.Tags, 0, tsi2.PowUint64(tagValueNum, tagKeyNum))
@@ -41,7 +41,7 @@ func dfs(tagsSlice *[]models.Tags, tagKeyNum, tagValueNum, idx int, tags *models
 		*tagsSlice = append(*tagsSlice, tags.Clone())
 		return
 	}
-	for i := 0; i<tagValueNum;i++ {
+	for i := 0; i < tagValueNum; i++ {
 		(*tags)[idx].Value = []byte(fmt.Sprintf("%d", i))
 		dfs(tagsSlice, tagKeyNum, tagValueNum, idx+1, tags)
 	}
