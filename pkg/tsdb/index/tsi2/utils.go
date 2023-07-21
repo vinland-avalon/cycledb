@@ -1,7 +1,11 @@
 package tsi2
 
 import (
+	"encoding/binary"
+	"io"
 	"math"
+
+	"github.com/influxdata/influxdb/pkg/rhh"
 )
 
 func PowUint64(x, y int) uint64 {
@@ -31,32 +35,32 @@ func VariableBaseConvert(indexes []int, capacities []uint64, idx int, previous [
 	}
 }
 
-// unionStringSets returns the union of two sets
-func unionStringSets(a, b map[string]struct{}) map[string]struct{} {
-	other := make(map[string]struct{})
-	for k := range a {
-		other[k] = struct{}{}
-	}
-	for k := range b {
-		other[k] = struct{}{}
-	}
-	return other
-}
+// // unionStringSets returns the union of two sets
+// func unionStringSets(a, b map[string]struct{}) map[string]struct{} {
+// 	other := make(map[string]struct{})
+// 	for k := range a {
+// 		other[k] = struct{}{}
+// 	}
+// 	for k := range b {
+// 		other[k] = struct{}{}
+// 	}
+// 	return other
+// }
 
-// intersectStringSets returns the intersection of two sets.
-func intersectStringSets(a, b map[string]struct{}) map[string]struct{} {
-	if len(a) < len(b) {
-		a, b = b, a
-	}
+// // intersectStringSets returns the intersection of two sets.
+// func intersectStringSets(a, b map[string]struct{}) map[string]struct{} {
+// 	if len(a) < len(b) {
+// 		a, b = b, a
+// 	}
 
-	other := make(map[string]struct{})
-	for k := range a {
-		if _, ok := b[k]; ok {
-			other[k] = struct{}{}
-		}
-	}
-	return other
-}
+// 	other := make(map[string]struct{})
+// 	for k := range a {
+// 		if _, ok := b[k]; ok {
+// 			other[k] = struct{}{}
+// 		}
+// 	}
+// 	return other
+// }
 
 // unionStringSets returns the union of two sets
 func unionStringSets2(a map[string]struct{}, b map[string]int) map[string]struct{} {
@@ -80,4 +84,111 @@ func mapToSlice(m map[string]struct{}) [][]byte {
 
 func SeriesIdWithMeasurementId(measurementId, id uint64) uint64 {
 	return measurementId<<32 | id
+}
+
+type FileHashMap struct {
+	// data []byte
+}
+
+func NewFileHashMap() FileHashMap {
+	return FileHashMap{}
+}
+
+func (fh *FileHashMap) FlushTo(w io.Writer, m map[uint64]uint64) (int64, error) {
+	n := int64(0)
+
+	// to avoid offset of zero
+	writeUint64To(w, uint64(0), &n)
+
+	// Build key hash map
+	rhhm := rhh.NewHashMap(rhh.Options{
+		Capacity:   int64(len(m)),
+		LoadFactor: LoadFactor,
+	})
+
+	for k, v := range m {
+		// fmt.Printf("put k:%v, v:%v at %v\n", k, v, n)
+		rhhm.Put(itob(k), n)
+		writeUint64To(w, k, &n)
+		writeUint64To(w, v, &n)
+	}
+
+	indexOffset := n
+
+	// Encode hash map length.
+	if err := writeUint64To(w, uint64(rhhm.Cap()), &n); err != nil {
+		return n, err
+	}
+
+	// Encode hash map offset entries.
+	for i := int64(0); i < rhhm.Cap(); i++ {
+		_, v := rhhm.Elem(i)
+
+		var offset int64
+		if tmpOffset, ok := v.(int64); ok {
+			offset = tmpOffset
+		}
+		// fmt.Printf("set elem: %v at %v\n", v, n)
+		if err := writeUint64To(w, uint64(offset), &n); err != nil {
+			return n, err
+		}
+	}
+
+	writeUint64To(w, uint64(indexOffset), &n)
+
+	return n, nil
+}
+
+func itob(v uint64) []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, v)
+	return b
+}
+
+// func (fh *FHash) ReadDataFrom(buf []byte) error {
+
+// }
+
+func (fh *FileHashMap) Get(buf []byte, k uint64) (uint64, bool) {
+	indexOffset := int64(binary.BigEndian.Uint64(buf[len(buf)-8:]))
+
+	n := int64(binary.BigEndian.Uint64(buf[indexOffset : indexOffset+8]))
+	indexOffset += 8
+	hash := rhh.HashKey(itob(k))
+	pos := hash % n
+	// fmt.Printf("k: %v, hashKey: %v, pos: %v\n", k, hash, pos)
+
+	// Track current distance
+	var d int64
+	for {
+		// Find offset of k/v pair.
+		offset := binary.BigEndian.Uint64(buf[indexOffset+(pos*8):])
+		// fmt.Printf("find %v at %v\n", k, offset)
+		if offset == 0 {
+			return 0, false
+		}
+
+		// Evaluate key if offset is not empty.
+		if offset > 0 {
+			// Parse into element.
+			tmpK := binary.BigEndian.Uint64(buf[offset : offset+8])
+			// Return if key match.
+			if k == tmpK {
+				return binary.BigEndian.Uint64(buf[offset+8 : offset+16]), true
+			}
+
+			// Check if we've exceeded the probe distance.
+			if d > rhh.Dist(rhh.HashKey(itob(tmpK)), pos, n) {
+				return 0, false
+			}
+		}
+
+		// Move position forward.
+		pos = (pos + 1) % n
+		d++
+
+		if d > n {
+			return 0, false
+		}
+	}
 }

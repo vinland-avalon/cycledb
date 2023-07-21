@@ -1,6 +1,9 @@
 package tsi2_test
 
 import (
+	"bytes"
+	"math/rand"
+	"reflect"
 	"testing"
 
 	"cycledb/pkg/tsdb/index/tsi2"
@@ -22,4 +25,56 @@ func TestVariableBaseConvert(t *testing.T) {
 	res := tsi2.VariableBaseConvert(indexes, capabilities, 1, prev)
 	assert.Equal(t, len(res), 8)
 	assert.True(t, ContainsUint64(res, []uint64{4, 5, 6, 7, 16, 17, 18, 19}))
+}
+
+func generateRandomKVPairs(seed int64, count int) map[uint64]uint64 {
+	// Set a fixed seed value to ensure reproducibility
+	rand.Seed(seed) // You can change this seed value to get different sequences
+
+	randomKeys := make([]uint64, count)
+	for i := 0; i < count; i++ {
+		randomKeys[i] = rand.Uint64()
+	}
+	randomValues := make([]uint64, count)
+	for i := 0; i < count; i++ {
+		randomValues[i] = rand.Uint64()
+	}
+
+	m := map[uint64]uint64{}
+	for i, key := range randomKeys {
+		m[key] = randomValues[i]
+	}
+
+	return m
+}
+
+func TestRandomNumbers(t *testing.T) {
+	nums := generateRandomKVPairs(42, 10)
+	assert.True(t, reflect.DeepEqual(nums, generateRandomKVPairs(42, 10)))
+}
+
+func TestFileHashMap(t *testing.T) {
+	m := generateRandomKVPairs(42, 1000)
+
+	var buf bytes.Buffer
+
+	fhm := tsi2.NewFileHashMap()
+	fhm.FlushTo(&buf, m)
+
+	for k, v := range m {
+		vfmp, ok := fhm.Get(buf.Bytes(), k)
+		assert.Equal(t, v, vfmp)
+		assert.True(t, ok)
+	}
+
+	qs := generateRandomKVPairs(21, 1000)
+	for k := range qs {
+		vfmp, ok := fhm.Get(buf.Bytes(), k)
+		if wantedv, exist := m[k]; exist {
+			assert.Equal(t, wantedv, vfmp)
+			assert.True(t, ok)
+		} else {
+			assert.False(t, ok)
+		}
+	}
 }
