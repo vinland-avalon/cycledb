@@ -108,6 +108,8 @@ type MeasurementBlockElem struct {
 	// flag byte   // flag
 	name []byte // measurement name
 
+	IdMap []byte
+
 	gridsBlock struct {
 		offset int64
 		size   int64
@@ -213,6 +215,17 @@ func (e *MeasurementBlockElem) UnmarshalBinary(data []byte) error {
 	data = data[sz:]
 	// }
 
+	// map map
+	sz, n, err = uvarint(data)
+	if err != nil {
+		return err
+	}
+	data = data[n:]
+	e.IdMap = data[:sz]
+	data = data[sz:]
+
+	
+
 	// Save length of elem.
 	e.size = start - len(data)
 
@@ -233,7 +246,7 @@ func NewMeasurementBlockWriter() *MeasurementBlockWriter {
 }
 
 // Add adds a measurement with series and tag set offset/size.
-func (mw *MeasurementBlockWriter) Add(name []byte, mmInfo *IndexFileMeasurementCompactInfo, seriesIDSet *tsdb.SeriesIDSet) {
+func (mw *MeasurementBlockWriter) Add(name []byte, mmInfo *IndexFileMeasurementCompactInfo, m map[uint64]uint64, seriesIDSet *tsdb.SeriesIDSet) {
 	mm := mw.mms[string(name)]
 	mm.gridBlock.offset = mmInfo.Offset
 	mm.gridBlock.size = mmInfo.Size
@@ -248,12 +261,8 @@ func (mw *MeasurementBlockWriter) Add(name []byte, mmInfo *IndexFileMeasurementC
 		})
 	}
 
-	if mm.seriesIDSet == nil {
-		mm.seriesIDSet = tsdb.NewSeriesIDSet()
-	}
-
-	// todo(vinland): instead of store series id, store bi-direction map between index id and series file id
-	mm.seriesIDSet.MergeInPlace(seriesIDSet)
+	mm.indexIdToFileId = m
+	mm.seriesIDSet = seriesIDSet
 	mw.mms[string(name)] = mm
 
 	// if deleted {
@@ -289,7 +298,7 @@ func (mw *MeasurementBlockWriter) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 
-	// Encode key list.
+	// Encode grids.
 	for _, name := range names {
 		// Retrieve measurement and save offset.
 		mm := mw.mms[name]
@@ -303,7 +312,7 @@ func (mw *MeasurementBlockWriter) WriteTo(w io.Writer) (n int64, err error) {
 	}
 	t.Data.Size = n - t.Data.Offset
 
-	// Build key hash map
+	// Build measurement hash map
 	m := rhh.NewHashMap(rhh.Options{
 		Capacity:   int64(len(names)),
 		LoadFactor: LoadFactor,
@@ -410,6 +419,28 @@ func (mw *MeasurementBlockWriter) writeMeasurementTo(w io.Writer, name []byte, m
 	// 	}
 	// }
 
+	nn, _ := mw.buf.WriteTo(w)
+	*n += nn
+
+	// Write indexId-seriesFileId map to buffer.
+	mw.buf.Reset()
+	mapEnc := NewFileHashMap()
+	if _, err := mapEnc.FlushTo(&mw.buf, mm.indexIdToFileId); err != nil {
+		return err
+	}
+
+	// Write data size & buffer.
+	if err := writeUvarintTo(w, uint64(mw.buf.Len()), n); err != nil {
+		return err
+	}
+
+	// Word align bitmap data.
+	// if offset := (*n) % 8; offset != 0 {
+	// 	if err := writeTo(w, make([]byte, 8-offset), n); err != nil {
+	// 		return err
+	// 	}
+	// }
+
 	nn, err := mw.buf.WriteTo(w)
 	*n += nn
 	return err
@@ -425,6 +456,7 @@ type CompactedMeasurement struct {
 		size   int64
 	}
 	seriesIDSet *tsdb.SeriesIDSet
+	indexIdToFileId map[uint64]uint64
 	offset      int64
 }
 
