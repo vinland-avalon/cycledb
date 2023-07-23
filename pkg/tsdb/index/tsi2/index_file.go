@@ -1,9 +1,14 @@
 package tsi2
 
 import (
+	"cycledb/pkg/tsdb"
 	"encoding/binary"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
+
+	"github.com/influxdata/influxdb/v2/models"
 )
 
 // IndexFileVersion is the current TSI1 index file version.
@@ -186,4 +191,155 @@ func (info *IndexFileMeasurementCompactInfo) Show() string {
 type GridCompactInfo struct {
 	offset int64
 	size   int64
+}
+
+type IndexFile struct {
+	// id    int
+	// level int
+	name string
+
+	gridBlock []byte
+	mblk      MeasurementBlock
+}
+
+func NewIndexFile(name string) *IndexFile {
+	return &IndexFile{
+		name: name,
+	}
+}
+
+func (ifile *IndexFile) Restore() error {
+	// if not read data, read it
+	// reference count ++
+	// now, only read
+	// todo(vinland): use name format to generate filepath with id and level
+	buf, err := ioutil.ReadFile(ifile.name)
+	if err != nil {
+		return err
+	}
+	fileSize := len(buf)
+
+	msz := int64(binary.BigEndian.Uint64(buf[fileSize-10 : fileSize-2]))
+	moffset := int64(binary.BigEndian.Uint64(buf[fileSize-18 : fileSize-10]))
+	ifile.gridBlock = buf[:moffset]
+
+	// Unmarshal into a block.
+	err = ifile.mblk.UnmarshalBinary(buf[moffset : moffset+msz])
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ifile *IndexFile) SeriesIDSet(name []byte) *tsdb.SeriesIDSet {
+	e, ok := ifile.mblk.Elem(name)
+	if !ok {
+		return tsdb.NewSeriesIDSet()
+	}
+	return e.SeriesIDSet()
+}
+
+func (ifile *IndexFile) SeriesIDSetForTagKey(name, key []byte) *tsdb.SeriesIDSet {
+	idsSet := tsdb.NewSeriesIDSet()
+
+	e, ok := ifile.mblk.Elem(name)
+	if !ok {
+		return idsSet
+	}
+
+	// todo(vinland): can judge first
+	grids, err := DecodeGrids(ifile.gridBlock, e)
+	if err != nil {
+		log.Fatalf("fail to decode grids")
+		return idsSet
+	}
+	for _, g := range grids {
+		if g.HasTagKey(string(key)) {
+			idsSet.MergeInPlace(g.GetSeriesIDSetForTags(nil))
+		}
+	}
+	return idsSet
+}
+
+func (ifile *IndexFile) SeriesIDSetForTagValue(name, key, value []byte) *tsdb.SeriesIDSet {
+	idsSet := tsdb.NewSeriesIDSet()
+
+	e, ok := ifile.mblk.Elem(name)
+	if !ok {
+		return idsSet
+	}
+
+	// todo(vinland): can judge first
+	grids, err := DecodeGrids(ifile.gridBlock, e)
+	if err != nil {
+		log.Fatalf("fail to decode grids")
+		return idsSet
+	}
+	for _, g := range grids {
+		if g.HasTagValue(string(key), string(value)) {
+			idsSet.MergeInPlace(g.GetSeriesIDSetForTags(models.NewTags(
+				map[string]string{
+					string(key): string(value),
+				},
+			)))
+		}
+	}
+	return idsSet
+}
+
+func DecodeGrids(buf []byte, e MeasurementBlockElem) ([]*Grid, error) {
+	grids := make([]*Grid, 0, len(e.grids))
+	for _, gridInfo := range e.grids {
+		grid, err := DecodeGrid(buf[gridInfo.offset : gridInfo.offset+gridInfo.size])
+		if err != nil {
+			return nil, err
+		}
+		grids = append(grids, grid)
+	}
+	return grids, nil
+}
+
+func DecodeGrid(buf []byte) (*Grid, error) {
+	offset, buf := uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
+
+	keyNum, buf := uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
+	keys := make([]string, 0, keyNum)
+	var sz uint64
+	for i := uint64(0); i < keyNum; i++ {
+		sz, buf = uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
+		value := buf[0:sz]
+		keys = append(keys, string(value))
+		buf = buf[sz:]
+	}
+
+	valueSliceNum, buf := uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
+	valuesSlice := make([]*TagValues, 0, valueSliceNum)
+	var capacity uint64
+	var valuesNum uint64
+	for i := uint64(0); i < valueSliceNum; i++ {
+		capacity, buf = uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
+		values := newTagValues(capacity)
+		valuesNum, buf = uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
+		for j := uint64(0); j < valuesNum; j++ {
+			sz, buf = uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
+			value := buf[0:sz]
+			buf = buf[sz:]
+			values.SetValue(string(value))
+		}
+		valuesSlice = append(valuesSlice, values)
+	}
+
+	// Parse data block size.
+	sz, buf = uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
+
+	ss := tsdb.NewSeriesIDSet()
+	err := ss.UnmarshalBinaryUnsafe(buf[:sz])
+	if err != nil {
+		return nil, err
+	}
+
+	// fmt.Printf("offset: %v\nkeys:%+v\nvaluesSlice:%+v\n", offset, keys, valuesSlice)
+	grid := NewGridWithKeysAndValuesSlice(offset, keys, valuesSlice, ss)
+	return grid, nil
 }

@@ -13,8 +13,8 @@ type Measurement struct {
 	gIndex        *GridIndex
 	measurementId uint64
 
-	// // fileSet: index files' names
-	// fileSet []string
+	// fileSet: index files' names
+	indexFiles []IndexFile
 }
 
 func NewMeasurement(i *GridIndex, name string, measurementId uint64) *Measurement {
@@ -31,6 +31,9 @@ func (m *Measurement) SeriesIDSet() *tsdb.SeriesIDSet {
 	idsSet.ForEach(func(id uint64) {
 		resSet.Add(m.GetFromIdMap(SeriesIdWithMeasurementId(m.measurementId, id)))
 	})
+	for _, indexFile := range m.indexFiles {
+		resSet.MergeInPlace(indexFile.SeriesIDSet([]byte(m.name)))
+	}
 	return resSet
 }
 
@@ -40,6 +43,9 @@ func (m *Measurement) SeriesIDSetForTagKey(key []byte) *tsdb.SeriesIDSet {
 	idsSet.ForEach(func(id uint64) {
 		resSet.Add(m.GetFromIdMap(SeriesIdWithMeasurementId(m.measurementId, id)))
 	})
+	for _, indexFile := range m.indexFiles {
+		resSet.MergeInPlace(indexFile.SeriesIDSetForTagKey([]byte(m.name), key))
+	}
 	return resSet
 }
 
@@ -50,6 +56,9 @@ func (m *Measurement) SeriesIDSetForTagValue(key, value []byte) *tsdb.SeriesIDSe
 		// idsSet.Remove(id)
 		resSet.Add(m.GetFromIdMap(SeriesIdWithMeasurementId(m.measurementId, id)))
 	})
+	for _, indexFile := range m.indexFiles {
+		resSet.MergeInPlace(indexFile.SeriesIDSetForTagValue([]byte(m.name), key, value))
+	}
 	return resSet
 }
 

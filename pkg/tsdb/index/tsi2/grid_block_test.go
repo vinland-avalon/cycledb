@@ -1,7 +1,6 @@
 package tsi2
 
 import (
-	"encoding/binary"
 	"fmt"
 	"os"
 	"reflect"
@@ -9,65 +8,7 @@ import (
 
 	"github.com/influxdata/influxdb/v2/models"
 	"github.com/influxdata/influxdb/v2/pkg/testing/assert"
-
-	"cycledb/pkg/tsdb"
 )
-
-func DecodeGrids(buf []byte, e MeasurementBlockElem) ([]*Grid, error) {
-	grids := make([]*Grid, 0, len(e.grids))
-	for _, gridInfo := range e.grids {
-		grid, err := DecodeGrid(buf[gridInfo.offset : gridInfo.offset+gridInfo.size])
-		if err != nil {
-			return nil, err
-		}
-		grids = append(grids, grid)
-	}
-	return grids, nil
-}
-
-func DecodeGrid(buf []byte) (*Grid, error) {
-	offset, buf := uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
-
-	keyNum, buf := uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
-	keys := make([]string, 0, keyNum)
-	var sz uint64
-	for i := uint64(0); i < keyNum; i++ {
-		sz, buf = uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
-		value := buf[0:sz]
-		keys = append(keys, string(value))
-		buf = buf[sz:]
-	}
-
-	valueSliceNum, buf := uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
-	valuesSlice := make([]*TagValues, 0, valueSliceNum)
-	var capacity uint64
-	var valuesNum uint64
-	for i := uint64(0); i < valueSliceNum; i++ {
-		capacity, buf = uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
-		values := newTagValues(capacity)
-		valuesNum, buf = uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
-		for j := uint64(0); j < valuesNum; j++ {
-			sz, buf = uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
-			value := buf[0:sz]
-			buf = buf[sz:]
-			values.SetValue(string(value))
-		}
-		valuesSlice = append(valuesSlice, values)
-	}
-
-	// Parse data block size.
-	sz, buf = uint64(binary.BigEndian.Uint64(buf[0:8])), buf[8:]
-
-	ss := tsdb.NewSeriesIDSet()
-	err := ss.UnmarshalBinaryUnsafe(buf[:sz])
-	if err != nil {
-		return nil, err
-	}
-
-	// fmt.Printf("offset: %v\nkeys:%+v\nvaluesSlice:%+v\n", offset, keys, valuesSlice)
-	grid := NewGridWithKeysAndValuesSlice(offset, keys, valuesSlice, ss)
-	return grid, nil
-}
 
 func TestEncodeGrid(t *testing.T) {
 	cpuValues := newTagValues(5)
