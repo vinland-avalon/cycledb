@@ -241,51 +241,61 @@ func (ifile *IndexFile) SeriesIDSet(name []byte) *tsdb.SeriesIDSet {
 }
 
 func (ifile *IndexFile) SeriesIDSetForTagKey(name, key []byte) *tsdb.SeriesIDSet {
-	idsSet := tsdb.NewSeriesIDSet()
+	resSet := tsdb.NewSeriesIDSet()
 
 	e, ok := ifile.mblk.Elem(name)
 	if !ok {
-		return idsSet
+		return resSet
 	}
 
 	// todo(vinland): can judge first
 	grids, err := DecodeGrids(ifile.gridBlock, e)
 	if err != nil {
 		log.Fatalf("fail to decode grids")
-		return idsSet
+		return resSet
 	}
 	for _, g := range grids {
 		if g.HasTagKey(string(key)) {
-			idsSet.MergeInPlace(g.GetSeriesIDSetForTags(nil))
+			idsSet := g.GetSeriesIDSetForTags(nil)
+			idsSet.ForEachNoLock(func(id uint64) {
+				if v, ok := e.GetSeriesFileId(id); ok {
+					resSet.AddNoLock(v)
+				}
+			})
 		}
 	}
-	return idsSet
+	return resSet
 }
 
 func (ifile *IndexFile) SeriesIDSetForTagValue(name, key, value []byte) *tsdb.SeriesIDSet {
-	idsSet := tsdb.NewSeriesIDSet()
+	resSet := tsdb.NewSeriesIDSet()
 
 	e, ok := ifile.mblk.Elem(name)
 	if !ok {
-		return idsSet
+		return resSet
 	}
 
 	// todo(vinland): can judge first
 	grids, err := DecodeGrids(ifile.gridBlock, e)
 	if err != nil {
 		log.Fatalf("fail to decode grids")
-		return idsSet
+		return resSet
 	}
 	for _, g := range grids {
 		if g.HasTagValue(string(key), string(value)) {
-			idsSet.MergeInPlace(g.GetSeriesIDSetForTags(models.NewTags(
+			idsSet := g.GetSeriesIDSetForTags(models.NewTags(
 				map[string]string{
 					string(key): string(value),
 				},
-			)))
+			))
+			idsSet.ForEachNoLock(func(id uint64) {
+				if v, ok := e.GetSeriesFileId(id); ok {
+					resSet.AddNoLock(v)
+				}
+			})
 		}
 	}
-	return idsSet
+	return resSet
 }
 
 func DecodeGrids(buf []byte, e MeasurementBlockElem) ([]*Grid, error) {

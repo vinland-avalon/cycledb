@@ -2,6 +2,7 @@ package tsi2_test
 
 import (
 	"bytes"
+	"encoding/gob"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -77,4 +78,36 @@ func TestFileHashMap(t *testing.T) {
 			assert.False(t, ok)
 		}
 	}
+}
+
+func TestGobEncoder(t *testing.T) {
+	// Your map from uint64 to uint64
+	myMap := make(map[uint64]uint64)
+	myMap[42] = 123
+	myMap[101] = 456
+
+	// Create a file to write the encoded data
+	var buf bytes.Buffer
+
+	// Encode the map and write it to the file
+	encoder := gob.NewEncoder(&buf)
+	if err := encoder.Encode(myMap); err != nil {
+		panic(err)
+	}
+
+	// Create an instance to decode the map
+	decoder := gob.NewDecoder(&buf)
+
+	// Create a map to hold the decoded data
+	decodedMap := make(map[uint64]uint64)
+
+	// Decode the map from the file
+	if err := decoder.Decode(&decodedMap); err != nil {
+		panic(err)
+	}
+
+	// Now you can access values using keys directly from decodedMap
+	key := uint64(42)
+	value := decodedMap[key]
+	assert.Equal(t, value, uint64(123))
 }

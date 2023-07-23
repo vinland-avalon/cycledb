@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/influxdb/v2/models"
 	"github.com/influxdata/influxdb/v2/pkg/bloom"
 	"github.com/influxdata/influxdb/v2/pkg/slices"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -551,7 +552,7 @@ func BenchmarkLogFile_WriteTo(b *testing.B) {
 func BenchmarkLogFile_WriteTo_FullPermutation(b *testing.B) {
 	tmp_gen := generator.FullPermutationGen{}
 	tagKeyNum := 4
-	for _, tagValueNum := range []int{14} {
+	for _, tagValueNum := range []int{8, 11, 14} {
 		name := fmt.Sprintf("tagKeyNum=%d, tagValueNum=%d", tagKeyNum, tagValueNum)
 		b.Run(name, func(b *testing.B) {
 			sfile := MustOpenSeriesFile(b)
@@ -593,6 +594,106 @@ func BenchmarkLogFile_WriteTo_FullPermutation(b *testing.B) {
 				}
 			}
 		})
+	}
+}
+
+func BenchmarkLogFile_ReadFrom_FullPermutation(b *testing.B) {
+	tmp_gen := generator.FullPermutationGen{}
+	tagKeyNum := 4
+	for _, tagValueNum := range []int{7} {
+		name := fmt.Sprintf("tagKeyNum=%d, tagValueNum=%d", tagKeyNum, tagValueNum)
+		b.Run(name, func(b *testing.B) {
+			sfile := MustOpenSeriesFile(b)
+			defer sfile.Close()
+
+			f := MustOpenLogFile(sfile.SeriesFile)
+			defer f.Close()
+			seriesSet := tsdb.NewSeriesIDSet()
+
+			tagsSlice := tmp_gen.GenerateInsertTagsSlice(tagKeyNum, tagValueNum)
+
+			// Estimate bloom filter size.
+			m, k := bloom.Estimate(uint64(len(tagsSlice)), 0.02)
+
+			// Initialize log file with series data.
+			for i := 0; i < len(tagsSlice); i++ {
+				if _, err := f.AddSeriesList(
+					seriesSet,
+					[][]byte{[]byte("test")},
+					[]models.Tags{tagsSlice[i]},
+				); err != nil {
+					b.Fatal(err)
+				}
+			}
+			b.ResetTimer()
+
+			// Create cpu profile for each subtest.
+			MustStartCPUProfile(name)
+			defer pprof.StopCPUProfile()
+
+			buf := bytes.NewBuffer(make([]byte, 0, 10*len(tagsSlice)))
+			if _, err := f.CompactTo(buf, m, k, nil); err != nil {
+				b.Fatal(err)
+			}
+
+			// Compact log file.
+			for i := 0; i < b.N; i++ {
+				rand.Seed(time.Now().UnixNano())
+				index := rand.Intn(len(tagsSlice))
+				keyIndex := rand.Intn(tagKeyNum)
+				f.TagValueSeriesIDSet([]byte("test"), []byte(tagsSlice[index][keyIndex].Key), []byte(tagsSlice[index][keyIndex].Value))
+			}
+		})
+	}
+}
+
+func TestLogFile_ReadFrom_FullPermutation(t *testing.T) {
+	tmp_gen := generator.FullPermutationGen{}
+	tagKeyNum := 4
+	for _, tagValueNum := range []int{3} {
+		name := fmt.Sprintf("tagKeyNum=%d, tagValueNum=%d", tagKeyNum, tagValueNum)
+
+		sfile := MustOpenSeriesFile(t)
+		defer sfile.Close()
+
+		f := MustOpenLogFile(sfile.SeriesFile)
+		defer f.Close()
+		seriesSet := tsdb.NewSeriesIDSet()
+
+		tagsSlice := tmp_gen.GenerateInsertTagsSlice(tagKeyNum, tagValueNum)
+
+		// Estimate bloom filter size.
+		m, k := bloom.Estimate(uint64(len(tagsSlice)), 0.02)
+
+		// Initialize log file with series data.
+		for i := 0; i < len(tagsSlice); i++ {
+			if _, err := f.AddSeriesList(
+				seriesSet,
+				[][]byte{[]byte("test")},
+				[]models.Tags{tagsSlice[i]},
+			); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		// Create cpu profile for each subtest.
+		MustStartCPUProfile(name)
+		defer pprof.StopCPUProfile()
+
+		buf := bytes.NewBuffer(make([]byte, 0, 10*len(tagsSlice)))
+		if _, err := f.CompactTo(buf, m, k, nil); err != nil {
+			t.Fatal(err)
+		}
+
+		// Compact log file.
+
+		rand.Seed(time.Now().UnixNano())
+		index := rand.Intn(len(tagsSlice))
+		keyIndex := rand.Intn(tagKeyNum)
+		idsSet, err := f.TagValueSeriesIDSet([]byte("test"), []byte(tagsSlice[index][keyIndex].Key), []byte(tagsSlice[index][keyIndex].Value))
+		assert.Nil(t, err)
+		assert.Equal(t, uint64(pow(tagValueNum, tagKeyNum-1)), idsSet.Cardinality())
+
 	}
 }
 

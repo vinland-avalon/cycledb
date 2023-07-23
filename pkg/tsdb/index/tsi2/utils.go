@@ -1,7 +1,9 @@
 package tsi2
 
 import (
+	"bytes"
 	"encoding/binary"
+	"encoding/gob"
 	"io"
 	"math"
 
@@ -82,10 +84,6 @@ func mapToSlice(m map[string]struct{}) [][]byte {
 	return res
 }
 
-func SeriesIdWithMeasurementId(measurementId, id uint64) uint64 {
-	return measurementId<<32 | id
-}
-
 type FileHashMap struct {
 	// data []byte
 }
@@ -94,7 +92,7 @@ func NewFileHashMap() FileHashMap {
 	return FileHashMap{}
 }
 
-func (fh *FileHashMap) FlushTo(w io.Writer, m map[uint64]uint64) (int64, error) {
+func (fh *FileHashMap) FlushTo(w io.Writer, m map[uint64]uint64) error {
 	n := int64(0)
 
 	// to avoid offset of zero
@@ -117,7 +115,7 @@ func (fh *FileHashMap) FlushTo(w io.Writer, m map[uint64]uint64) (int64, error) 
 
 	// Encode hash map length.
 	if err := writeUint64To(w, uint64(rhhm.Cap()), &n); err != nil {
-		return n, err
+		return err
 	}
 
 	// Encode hash map offset entries.
@@ -130,13 +128,13 @@ func (fh *FileHashMap) FlushTo(w io.Writer, m map[uint64]uint64) (int64, error) 
 		}
 		// fmt.Printf("set elem: %v at %v\n", v, n)
 		if err := writeUint64To(w, uint64(offset), &n); err != nil {
-			return n, err
+			return err
 		}
 	}
 
 	writeUint64To(w, uint64(indexOffset), &n)
 
-	return n, nil
+	return nil
 }
 
 func itob(v uint64) []byte {
@@ -191,4 +189,39 @@ func (fh *FileHashMap) Get(buf []byte, k uint64) (uint64, bool) {
 			return 0, false
 		}
 	}
+}
+
+type IdMap struct {
+	m map[uint64]uint64
+}
+
+func NewIdMap() *IdMap {
+	return &IdMap{}
+}
+
+func (idm *IdMap) FlushTo(w io.Writer, m map[uint64]uint64) error {
+	// Encode the map and write it to the file
+	encoder := gob.NewEncoder(w)
+	if err := encoder.Encode(m); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (idm *IdMap) ReadFrom(buf []byte) {
+	// Create an instance to decode the map
+	decoder := gob.NewDecoder(bytes.NewReader(buf))
+
+	// Create a map to hold the decoded data
+	idm.m = make(map[uint64]uint64)
+
+	// Decode the map from the file
+	if err := decoder.Decode(&idm.m); err != nil {
+		panic(err)
+	}
+}
+
+func (idm *IdMap) Get(k uint64) (uint64, bool) {
+	v, ok := idm.m[k]
+	return v, ok
 }

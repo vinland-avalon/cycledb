@@ -108,7 +108,7 @@ type MeasurementBlockElem struct {
 	// flag byte   // flag
 	name []byte // measurement name
 
-	IdMap []byte
+	idMap IdMap
 
 	gridsBlock struct {
 		offset int64
@@ -221,15 +221,18 @@ func (e *MeasurementBlockElem) UnmarshalBinary(data []byte) error {
 		return err
 	}
 	data = data[n:]
-	e.IdMap = data[:sz]
+	// look up a number to fillup the IdMap
+	e.idMap.ReadFrom(data)
 	data = data[sz:]
-
-	
 
 	// Save length of elem.
 	e.size = start - len(data)
 
 	return nil
+}
+
+func (e *MeasurementBlockElem) GetSeriesFileId(k uint64) (uint64, bool) {
+	return e.idMap.Get(k)
 }
 
 // MeasurementBlockWriter writes a measurement block.
@@ -424,8 +427,8 @@ func (mw *MeasurementBlockWriter) writeMeasurementTo(w io.Writer, name []byte, m
 
 	// Write indexId-seriesFileId map to buffer.
 	mw.buf.Reset()
-	mapEnc := NewFileHashMap()
-	if _, err := mapEnc.FlushTo(&mw.buf, mm.indexIdToFileId); err != nil {
+	mapEnc := NewIdMap()
+	if err := mapEnc.FlushTo(&mw.buf, mm.indexIdToFileId); err != nil {
 		return err
 	}
 
@@ -443,8 +446,38 @@ func (mw *MeasurementBlockWriter) writeMeasurementTo(w io.Writer, name []byte, m
 
 	nn, err := mw.buf.WriteTo(w)
 	*n += nn
+	fmt.Printf("The size of map block:%v\n", nn)
+	// fmt.Printf("The size of map block if use gob:%v\n", encodeWithGob(mm.indexIdToFileId))
+	// fmt.Printf("The size of map block if use messagePack:%v\n", encodeWithMessagePack(mm.indexIdToFileId))
+	// fmt.Printf("The size of map block if just store nums:%v\n", eoncodeNums(mm.indexIdToFileId))
+
 	return err
 }
+
+// func encodeWithGob(m map[uint64]uint64) int {
+// 	// Create a file to write the encoded data
+// 	var baf bytes.Buffer
+
+// 	// Encode the map and write it to the file
+// 	encoder := gob.NewEncoder(&baf)
+// 	if err := encoder.Encode(m); err != nil {
+// 		panic(err)
+// 	}
+// 	return baf.Len()
+// }
+
+// func encodeWithMessagePack(m map[uint64]uint64) int {
+// 	serializedMsgPack, err := msgpack.Marshal(m)
+// 	if err != nil {
+// 		fmt.Println("Error:", err)
+// 		return 0
+// 	}
+// 	return len(serializedMsgPack)
+// }
+
+// func eoncodeNums(m map[uint64]uint64) int {
+// 	return 8*len(m)
+// }
 
 type CompactedMeasurement struct {
 	gridBlock struct {
@@ -455,9 +488,9 @@ type CompactedMeasurement struct {
 		offset int64
 		size   int64
 	}
-	seriesIDSet *tsdb.SeriesIDSet
+	seriesIDSet     *tsdb.SeriesIDSet
 	indexIdToFileId map[uint64]uint64
-	offset      int64
+	offset          int64
 }
 
 // MeasurementBlockTrailer represents meta data at the end of a MeasurementBlock.
