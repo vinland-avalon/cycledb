@@ -1,7 +1,4 @@
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Running tool: /home/bohan_wu_ubuntu/.gvm/gos/go1.20/bin/go test -benchmem -run=^$ -bench ^BenchmarkIndexFile_WriteTo$ cycledb/pkg/tsdb/index/tsi2 -v
-
-*************** tagKeyNum = 3, tagValueNum = 4, seriesKeyGenerator = full_permutation_generator *******************
 goos: linux
 goarch: amd64
 pkg: cycledb/pkg/tsdb/index/tsi2
@@ -49,26 +46,79 @@ BenchmarkLogFile_WriteTo_FullPermutation/tagKeyNum=4,_tagValueNum=11
     /home/bohan_wu_ubuntu/cycledb/pkg/tsdb/index/tsi1/log_file_test.go:592: sz=165018b
     /home/bohan_wu_ubuntu/cycledb/pkg/tsdb/index/tsi1/log_file_test.go:592: sz=165018b
 
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
-
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 goos: linux
 goarch: amd64
-pkg: cycledb/pkg/tsdb/index/tsi1
+pkg: cycledb/pkg/tsdb/index/tsi2
 cpu: 12th Gen Intel(R) Core(TM) i5-12500H
-BenchmarkLogFile_ReadFrom_FullPermutation
-BenchmarkLogFile_ReadFrom_FullPermutation/tagKeyNum=4,_tagValueNum=8
-BenchmarkLogFile_ReadFrom_FullPermutation/tagKeyNum=4,_tagValueNum=8-16         	  117057	     10586 ns/op	    1477 B/
-
-goos: linux
-goarch: amd64
-pkg: cycledb/pkg/tsdb/index/tsi1
-cpu: 12th Gen Intel(R) Core(TM) i5-12500H
-BenchmarkLogFile_ReadFrom_FullPermutation
-BenchmarkLogFile_ReadFrom_FullPermutation/tagKeyNum=4,_tagValueNum=7
-BenchmarkLogFile_ReadFrom_FullPermutation/tagKeyNum=4,_tagValueNum=7-16         	  118950	      9446 ns/op	    1150 B/op	       9 allocs/op
+BenchmarkIndexFile_ReadFrom
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=4
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=4-16         	   16898	     70560 ns/op	   38725 B/op	     297 allocs/op
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=5
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=5-16         	    9938	    119415 ns/op	   66812 B/op	     318 allocs/op
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=6
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=6-16         	     585	   2103336 ns/op	  789750 B/op	     711 allocs/op
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=7
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=7-16         	     588	   2026632 ns/op	  832968 B/op	     734 allocs/op
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=8
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=8-16         	     529	   2355103 ns/op	 1066815 B/op	     799 allocs/op
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=9
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=9-16         	     464	   2588435 ns/op	 1114466 B/op	     901 allocs/op
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=10
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=10-16        	     294	   4259380 ns/op	 1822304 B/op	    1029 allocs/op
 PASS
-ok  	cycledb/pkg/tsdb/index/tsi1	164.056s
+ok  	cycledb/pkg/tsdb/index/tsi2	102.656s
+
+
+-----------------------------------------------------------------------
+
+goos: linux
+goarch: amd64
+pkg: cycledb/pkg/tsdb/index/tsi1
+cpu: 12th Gen Intel(R) Core(TM) i5-12500H
+BenchmarkIndexFile_TagValueSeries_Full_Permutation
+BenchmarkIndexFile_TagValueSeries_Full_Permutation/tagKeyNum=4,_tagValueNum=4
+BenchmarkIndexFile_TagValueSeries_Full_Permutation/tagKeyNum=4,_tagValueNum=4-16         	   90388	     13052 ns/op	    6484 B/op	      21 allocs/op
+BenchmarkIndexFile_TagValueSeries_Full_Permutation/tagKeyNum=4,_tagValueNum=5
+BenchmarkIndexFile_TagValueSeries_Full_Permutation/tagKeyNum=4,_tagValueNum=5-16         	   80238	     14063 ns/op	   11988 B/op	      21 allocs/op
+BenchmarkIndexFile_TagValueSeries_Full_Permutation/tagKeyNum=4,_tagValueNum=6
+BenchmarkIndexFile_TagValueSeries_Full_Permutation/tagKeyNum=4,_tagValueNum=6-16         	   72384	     16369 ns/op	   22868 B/op	      21 allocs/op
+BenchmarkIndexFile_TagValueSeries_Full_Permutation/tagKeyNum=4,_tagValueNum=7
+BenchmarkIndexFile_TagValueSeries_Full_Permutation/tagKeyNum=4,_tagValueNum=7-16         	   58623	     20187 ns/op	   42068 B/op	      21 allocs/op
+BenchmarkIndexFile_TagValueSeries_Full_Permutation/tagKeyNum=4,_tagValueNum=8
+BenchmarkIndexFile_TagValueSeries_Full_Permutation/tagKeyNum=4,_tagValueNum=8-16         	   47547	     24282 ns/op	   66644 B/op	      21 allocs/op
+BenchmarkIndexFile_TagValueSeries_Full_Permutation/tagKeyNum=4,_tagValueNum=9
+BenchmarkIndexFile_TagValueSeries_Full_Permutation/tagKeyNum=4,_tagValueNum=9-16         	   40798	     28644 ns/op	   91228 B/op	      21 allocs/op
+BenchmarkIndexFile_TagValueSeries_Full_Permutation/tagKeyNum=4,_tagValueNum=10
+BenchmarkIndexFile_TagValueSeries_Full_Permutation/tagKeyNum=4,_tagValueNum=10-16        	   34214	     33575 ns/op	  123996 B/op	      21 allocs/op
+PASS
+ok  	cycledb/pkg/tsdb/index/tsi1	202.457s
+
+
+-------------------------- with file-level hash map ----------------------------
+goos: linux
+goarch: amd64
+pkg: cycledb/pkg/tsdb/index/tsi2
+cpu: 12th Gen Intel(R) Core(TM) i5-12500H
+BenchmarkIndexFile_ReadFrom
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=4
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=4-16         	   49294	     24734 ns/op	   16248 B/op	      92 allocs/op
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=5
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=5-16         	   31809	     33866 ns/op	   29048 B/op	      97 allocs/op
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=6
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=6-16         	     573	   1922807 ns/op	  706924 B/op	     460 allocs/op
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=7
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=7-16         	     651	   1949323 ns/op	  747123 B/op	     465 allocs/op
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=8
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=8-16         	     637	   1835562 ns/op	  778810 B/op	     463 allocs/op
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=9
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=9-16         	     645	   1972875 ns/op	  922697 B/op	     476 allocs/op
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=10
+BenchmarkIndexFile_ReadFrom/tagKeyNum=4,_tagValueNum=10-16        	     388	   3283285 ns/op	 1301945 B/op	     578 allocs/op
+PASS
+ok  	cycledb/pkg/tsdb/index/tsi2	100.920s
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+

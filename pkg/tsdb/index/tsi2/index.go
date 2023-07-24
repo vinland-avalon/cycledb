@@ -20,7 +20,6 @@ import (
 	"go.uber.org/zap"
 
 	"cycledb/pkg/tsdb"
-	"cycledb/pkg/tsdb/index/tsi1"
 )
 
 var (
@@ -400,8 +399,8 @@ func (i *Index) Compact(id int) error {
 	// defer f.Close()
 
 	// Compact index in memory to new index file.
-	lvl := tsi1.CompactionLevel{M: 1 << 25, K: 6}
-	n, err := i.CompactTo(f, lvl.M, lvl.K)
+	// lvl := tsi1.CompactionLevel{M: 1 << 25, K: 6}
+	n, err := i.CompactTo(f)
 	if err != nil {
 		log.Error("Cannot compact index", zap.Error(err))
 		return err
@@ -433,7 +432,7 @@ func (i *Index) Compact(id int) error {
 }
 
 // CompactTo compacts the in-memory index and writes it to w.
-func (i *Index) CompactTo(w io.Writer, m, k uint64) (n int64, err error) {
+func (i *Index) CompactTo(w io.Writer) (n int64, err error) {
 	// Wrap in bufferred writer with a buffer equivalent to the LogFile size.
 	bw := bufio.NewWriterSize(w, indexFileBufferSize) // 128K
 

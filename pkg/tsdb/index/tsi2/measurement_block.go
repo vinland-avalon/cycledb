@@ -446,7 +446,7 @@ func (mw *MeasurementBlockWriter) writeMeasurementTo(w io.Writer, name []byte, m
 
 	nn, err := mw.buf.WriteTo(w)
 	*n += nn
-	fmt.Printf("The size of map block:%v\n", nn)
+	// fmt.Printf("The size of map block:%v\n", nn)
 	// fmt.Printf("The size of map block if use gob:%v\n", encodeWithGob(mm.indexIdToFileId))
 	// fmt.Printf("The size of map block if use messagePack:%v\n", encodeWithMessagePack(mm.indexIdToFileId))
 	// fmt.Printf("The size of map block if just store nums:%v\n", eoncodeNums(mm.indexIdToFileId))

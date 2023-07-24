@@ -61,16 +61,17 @@ func TestFileHashMap(t *testing.T) {
 
 	fhm := tsi2.NewFileHashMap()
 	fhm.FlushTo(&buf, m)
+	fhm.ReadFrom(buf.Bytes())
 
 	for k, v := range m {
-		vfmp, ok := fhm.Get(buf.Bytes(), k)
+		vfmp, ok := fhm.Get(k)
 		assert.Equal(t, v, vfmp)
 		assert.True(t, ok)
 	}
 
 	qs := generateRandomKVPairs(21, 1000)
 	for k := range qs {
-		vfmp, ok := fhm.Get(buf.Bytes(), k)
+		vfmp, ok := fhm.Get(k)
 		if wantedv, exist := m[k]; exist {
 			assert.Equal(t, wantedv, vfmp)
 			assert.True(t, ok)

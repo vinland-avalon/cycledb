@@ -85,11 +85,15 @@ func mapToSlice(m map[string]struct{}) [][]byte {
 }
 
 type FileHashMap struct {
-	// data []byte
+	data []byte
 }
 
 func NewFileHashMap() FileHashMap {
 	return FileHashMap{}
+}
+
+func (fh *FileHashMap) ReadFrom(buf []byte) {
+	fh.data = buf
 }
 
 func (fh *FileHashMap) FlushTo(w io.Writer, m map[uint64]uint64) error {
@@ -147,10 +151,10 @@ func itob(v uint64) []byte {
 
 // }
 
-func (fh *FileHashMap) Get(buf []byte, k uint64) (uint64, bool) {
-	indexOffset := int64(binary.BigEndian.Uint64(buf[len(buf)-8:]))
+func (fh *FileHashMap) Get(k uint64) (uint64, bool) {
+	indexOffset := int64(binary.BigEndian.Uint64(fh.data[len(fh.data)-8:]))
 
-	n := int64(binary.BigEndian.Uint64(buf[indexOffset : indexOffset+8]))
+	n := int64(binary.BigEndian.Uint64(fh.data[indexOffset : indexOffset+8]))
 	indexOffset += 8
 	hash := rhh.HashKey(itob(k))
 	pos := hash % n
@@ -160,7 +164,7 @@ func (fh *FileHashMap) Get(buf []byte, k uint64) (uint64, bool) {
 	var d int64
 	for {
 		// Find offset of k/v pair.
-		offset := binary.BigEndian.Uint64(buf[indexOffset+(pos*8):])
+		offset := binary.BigEndian.Uint64(fh.data[indexOffset+(pos*8):])
 		// fmt.Printf("find %v at %v\n", k, offset)
 		if offset == 0 {
 			return 0, false
@@ -169,10 +173,10 @@ func (fh *FileHashMap) Get(buf []byte, k uint64) (uint64, bool) {
 		// Evaluate key if offset is not empty.
 		if offset > 0 {
 			// Parse into element.
-			tmpK := binary.BigEndian.Uint64(buf[offset : offset+8])
+			tmpK := binary.BigEndian.Uint64(fh.data[offset : offset+8])
 			// Return if key match.
 			if k == tmpK {
-				return binary.BigEndian.Uint64(buf[offset+8 : offset+16]), true
+				return binary.BigEndian.Uint64(fh.data[offset+8 : offset+16]), true
 			}
 
 			// Check if we've exceeded the probe distance.
