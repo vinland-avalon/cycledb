@@ -29,7 +29,7 @@ const SeriesIDSize = 8
 
 const (
 	// SeriesFilePartitionN is the number of partitions a series file is split into.
-	SeriesFilePartitionN = 8
+	SeriesFilePartitionN = 1
 )
 
 // SeriesFile represents the section of the index that holds series data.
@@ -44,7 +44,7 @@ type SeriesFile struct {
 	Logger *zap.Logger
 
 	// when insert series, wheather map to passed ids or create one
-	// DesignateId bool
+	// DesignateID bool
 }
 
 // NewSeriesFile returns a new instance of SeriesFile.
@@ -60,21 +60,6 @@ func NewSeriesFile(path string) *SeriesFile {
 		Logger:                 zap.NewNop(),
 	}
 }
-
-// // NewSeriesFileWithDesignatedIDS returns a new instance of SeriesFile.
-// func NewSeriesFileWithDesignatedIDS(path string) *SeriesFile {
-// 	maxSnapshotConcurrency := runtime.GOMAXPROCS(0)
-// 	if maxSnapshotConcurrency < 1 {
-// 		maxSnapshotConcurrency = 1
-// 	}
-
-// 	return &SeriesFile{
-// 		path:                   path,
-// 		maxSnapshotConcurrency: maxSnapshotConcurrency,
-// 		Logger:                 zap.NewNop(),
-// 		DesignateId:            true,
-// 	}
-// }
 
 func (f *SeriesFile) WithMaxCompactionConcurrency(maxCompactionConcurrency int) {
 	if maxCompactionConcurrency < 1 {
@@ -203,6 +188,26 @@ func (f *SeriesFile) CreateSeriesListIfNotExists(names [][]byte, tagsSlice []mod
 		p := f.partitions[i]
 		g.Go(func() error {
 			return p.CreateSeriesListIfNotExists(keys, keyPartitionIDs, ids)
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+// CreateSeriesListIfNotExists creates a list of series in bulk if they don't exist.
+// The returned ids slice returns IDs for every name+tags, creating new series IDs as needed.
+func (f *SeriesFile) CreateSeriesListIfNotExistsWithDesignatedIDs(names [][]byte, tagsSlice []models.Tags, designateIDs []uint64) ([]uint64, error) {
+	keys := GenerateSeriesKeys(names, tagsSlice)
+	keyPartitionIDs := f.SeriesKeysPartitionIDs(keys)
+	ids := make([]uint64, len(keys))
+
+	var g errgroup.Group
+	for i := range f.partitions {
+		p := f.partitions[i]
+		g.Go(func() error {
+			return p.CreateSeriesListIfNotExistsWithDesignatedIDs(keys, keyPartitionIDs, ids, designateIDs)
 		})
 	}
 	if err := g.Wait(); err != nil {

@@ -65,7 +65,8 @@ func TestIndexFile_TagKeySeriesIDIterator(t *testing.T) {
 	// tag block in the index file are merged together and iterated, the roaring
 	// bitmap library sorts the series ids, resulting the series keys being
 	// emitted in a different order to that which they were written.
-	exp := []string{"cpu,region=west", "cpu,region=east"}
+	// I changed the partitionN from 8 to 1, so the order changed
+	exp := []string{"cpu,region=east", "cpu,region=west"}
 	var got []string
 	for {
 		e, err := itr.Next()
