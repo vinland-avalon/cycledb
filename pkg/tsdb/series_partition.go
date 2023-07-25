@@ -40,7 +40,6 @@ type SeriesPartition struct {
 	segments []*SeriesSegment
 	index    *SeriesIndex
 	seq      uint64 // series id sequence
-	DesignateID bool
 
 	compacting          bool
 	compactionLimiter   limiter.Fixed
