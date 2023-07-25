@@ -9,6 +9,7 @@ import (
 )
 
 type Measurement struct {
+	measurementID uint64
 	name          string
 	gIndex        *GridIndex
 
@@ -16,18 +17,28 @@ type Measurement struct {
 	indexFiles []IndexFile
 }
 
-func NewMeasurement(i *GridIndex, name string) *Measurement {
+func NewMeasurement(i *GridIndex, name string, id uint64) *Measurement {
 	return &Measurement{
-		gIndex:                i,
-		name:                  name,
+		gIndex:        i,
+		name:          name,
+		measurementID: id,
 	}
+}
+
+func (m *Measurement) CacheSeriesIDSet() *tsdb.SeriesIDSet {
+	idsSet := m.gIndex.SeriesIDSet()
+	resSet := tsdb.NewSeriesIDSet()
+	idsSet.ForEach(func(id uint64) {
+		resSet.Add(id)
+	})
+	return resSet
 }
 
 func (m *Measurement) SeriesIDSet() *tsdb.SeriesIDSet {
 	idsSet := m.gIndex.SeriesIDSet()
 	resSet := tsdb.NewSeriesIDSet()
 	idsSet.ForEach(func(id uint64) {
-		resSet.Add(m.GetFromIdMap(id))
+		resSet.Add(m.FormatIdWithMeasurementID(id))
 	})
 	for _, indexFile := range m.indexFiles {
 		resSet.MergeInPlace(indexFile.SeriesIDSet([]byte(m.name)))
@@ -39,7 +50,7 @@ func (m *Measurement) SeriesIDSetForTagKey(key []byte) *tsdb.SeriesIDSet {
 	idsSet := m.gIndex.SeriesIDSetForTagKey(string(key))
 	resSet := tsdb.NewSeriesIDSet()
 	idsSet.ForEach(func(id uint64) {
-		resSet.Add(m.GetFromIdMap(id))
+		resSet.Add(m.FormatIdWithMeasurementID(id))
 	})
 	for _, indexFile := range m.indexFiles {
 		resSet.MergeInPlace(indexFile.SeriesIDSetForTagKey([]byte(m.name), key))
@@ -52,29 +63,28 @@ func (m *Measurement) SeriesIDSetForTagValue(key, value []byte) *tsdb.SeriesIDSe
 	resSet := tsdb.NewSeriesIDSet()
 	idsSet.ForEach(func(id uint64) {
 		// idsSet.Remove(id)
-		resSet.Add(m.GetFromIdMap(id))
+		resSet.Add(m.FormatIdWithMeasurementID(id))
 	})
 	for _, indexFile := range m.indexFiles {
 		resSet.MergeInPlace(indexFile.SeriesIDSetForTagValue([]byte(m.name), key, value))
 	}
+	// fmt.Printf("Measurement.SeriesIDSetForTagValue: resSet: %v\n", resSet)
 	return resSet
 }
 
 func (m *Measurement) SetTags(tags models.Tags) (uint64, bool) {
 	id, success := m.gIndex.SetTags(tags)
+	id = m.FormatIdWithMeasurementID(id)
 	if !success {
 		// fmt.Printf("set tag pair set fails: tags: %v\n", tags)
 		return id, false
 	}
+	// fmt.Printf("m.SetTags: id: %+v\n", id)
 	return id, true
 }
 
-func (m *Measurement) SetIdMap(indexId, seriesFileId uint64) {
-	m.gIndex.IndexIdToSeriesFileId[indexId] = seriesFileId
-}
-
-func (m *Measurement) GetFromIdMap(indexId uint64) uint64 {
-	return m.gIndex.IndexIdToSeriesFileId[indexId]
+func (m *Measurement) FormatIdWithMeasurementID(indexId uint64) uint64 {
+	return (m.measurementID << 24) | (indexId)
 }
 
 // one measurement map to one grid index
@@ -103,18 +113,6 @@ func (ms *Measurements) MeasurementByName(name []byte) (*Measurement, error) {
 	return ms.measurements[id], nil
 }
 
-func (ms *Measurements) SetIdMap(name []byte, indexId, seriesFileId uint64) error {
-	m, err := ms.MeasurementByName(name)
-	if err != nil {
-		return err
-	}
-	if m == nil {
-		return fmt.Errorf("measurement:%s does not exist", string(name))
-	}
-	m.SetIdMap(indexId, seriesFileId)
-	return nil
-}
-
 func (ms *Measurements) DropMeasurement(name []byte) error {
 	if id, ok := ms.measurementId[string(name)]; ok {
 		delete(ms.measurementId, string(name))
@@ -125,7 +123,7 @@ func (ms *Measurements) DropMeasurement(name []byte) error {
 
 func (ms *Measurements) AppendMeasurement(name []byte) error {
 	measurementId := uint64(len(ms.measurements))
-	m := NewMeasurement(NewGridIndex(NewMultiplierOptimizer(5, 2)), string(name))
+	m := NewMeasurement(NewGridIndex(NewMultiplierOptimizer(10, 2)), string(name), measurementId)
 	ms.measurementId[string(name)] = measurementId
 	ms.measurements = append(ms.measurements, m)
 	return nil

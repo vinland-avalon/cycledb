@@ -8,7 +8,9 @@ import (
 	"testing"
 
 	"cycledb/pkg/tsdb"
+
 	"github.com/influxdata/influxdb/v2/models"
+	"github.com/influxdata/influxdb/v2/pkg/testing/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 	"golang.org/x/sync/errgroup"
@@ -94,6 +96,48 @@ func TestSeriesFile_Series(t *testing.T) {
 
 	// Verify non-existent series doesn't exist.
 	if sfile.HasSeries([]byte("foo"), models.NewTags(map[string]string{"region": "north"}), nil) {
+		t.Fatal("series should not exist")
+	}
+}
+
+func TestSeriesFile_Series_One_Parition(t *testing.T) {
+	sfile := MustOpenSeriesFile(t)
+	defer sfile.Close()
+
+	series := []Series{
+		{Name: []byte("cpu"), Tags: models.NewTags(map[string]string{"region": "east"})},
+		{Name: []byte("cpu"), Tags: models.NewTags(map[string]string{"region": "west"})},
+		{Name: []byte("mem"), Tags: models.NewTags(map[string]string{"region": "east"})},
+	}
+	designatedIds := []uint64{ uint64(23), uint64(64), uint64(13)}
+	for i, s := range series {
+		_, err := sfile.CreateSeriesListIfNotExistsWithDesignatedIDs([][]byte{[]byte(s.Name)}, []models.Tags{s.Tags}, []uint64{designatedIds[i]})
+		if err != nil {
+			t.Fatal()
+		}
+	}
+
+	// Verify total number of series is correct.
+	if n := sfile.SeriesCount(); n != uint64(len(series)) {
+		t.Fatalf("unexpected series count: %d", n)
+	}
+
+	// Verify all series exist.
+	for i, s := range series {
+		if seriesID := sfile.SeriesID(s.Name, s.Tags, nil); seriesID != designatedIds[i] {
+			t.Fatalf("series does not exist: i=%d", i)
+		}
+		seriesKey := sfile.SeriesKey(designatedIds[i])
+		if len(seriesKey) == 0 {
+			t.Fatal()
+		}
+		name, tags := tsdb.ParseSeriesKey(seriesKey)
+		assert.Equal(t, name, series[i].Name)
+		assert.Equal(t, series[i].Tags, tags)
+	}
+
+	// Verify non-existent series doesn't exist.
+	if sfile.HasSeries([]byte("foo"), models.NewTags(map[string]string{"region": "east"}), nil) {
 		t.Fatal("series should not exist")
 	}
 }

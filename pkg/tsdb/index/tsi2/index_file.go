@@ -172,8 +172,9 @@ func (info *IndexFileCompactInfo) Show() string {
 }
 
 type IndexFileMeasurementCompactInfo struct {
-	Offset int64
-	Size   int64
+	Offset        int64
+	Size          int64
+	MeasurementID uint64
 
 	// todo(vinland): have not been compacted to measurement block
 	gridInfos []*GridCompactInfo
@@ -233,10 +234,16 @@ func (ifile *IndexFile) Restore() error {
 }
 
 func (ifile *IndexFile) SeriesIDSet(name []byte) *tsdb.SeriesIDSet {
+	resSet := tsdb.NewSeriesIDSet()
 	e, ok := ifile.mblk.Elem(name)
 	if !ok {
-		return tsdb.NewSeriesIDSet()
+		return resSet
 	}
+	e.SeriesIDSet().ForEachNoLock(func(id uint64) {
+		if v, ok := e.FormatIdWithMeasurementID(id); ok {
+			resSet.AddNoLock(v)
+		}
+	})
 	return e.SeriesIDSet()
 }
 
@@ -258,7 +265,7 @@ func (ifile *IndexFile) SeriesIDSetForTagKey(name, key []byte) *tsdb.SeriesIDSet
 		if g.HasTagKey(string(key)) {
 			idsSet := g.GetSeriesIDSetForTags(nil)
 			idsSet.ForEachNoLock(func(id uint64) {
-				if v, ok := e.GetSeriesFileId(id); ok {
+				if v, ok := e.FormatIdWithMeasurementID(id); ok {
 					resSet.AddNoLock(v)
 				}
 			})
@@ -289,7 +296,7 @@ func (ifile *IndexFile) SeriesIDSetForTagValue(name, key, value []byte) *tsdb.Se
 				},
 			))
 			idsSet.ForEachNoLock(func(id uint64) {
-				if v, ok := e.GetSeriesFileId(id); ok {
+				if v, ok := e.FormatIdWithMeasurementID(id); ok {
 					resSet.AddNoLock(v)
 				}
 			})

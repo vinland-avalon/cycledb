@@ -40,7 +40,6 @@ type SeriesPartition struct {
 	segments []*SeriesSegment
 	index    *SeriesIndex
 	seq      uint64 // series id sequence
-	// DesignateId bool
 
 	compacting          bool
 	compactionLimiter   limiter.Fixed
@@ -61,7 +60,6 @@ func NewSeriesPartition(id int, path string, compactionLimiter limiter.Fixed) *S
 		CompactThreshold:  DefaultSeriesPartitionCompactThreshold,
 		Logger:            zap.NewNop(),
 		seq:               uint64(id) + 1,
-		// DesignateId:       DesignatedId,
 	}
 }
 
@@ -327,6 +325,136 @@ func (p *SeriesPartition) CreateSeriesListIfNotExists(keys [][]byte, keyPartitio
 	return nil
 }
 
+// CreateSeriesListIfNotExists creates a list of series in bulk if they don't exist.
+// The ids parameter is modified to contain series IDs for all keys belonging to this partition.
+func (p *SeriesPartition) CreateSeriesListIfNotExistsWithDesignatedIDs(keys [][]byte, keyPartitionIDs []int, ids, designatedIDs []uint64) error {
+	var writeRequired bool
+	p.mu.RLock()
+	if p.closed {
+		p.mu.RUnlock()
+		return ErrSeriesPartitionClosed
+	}
+	for i := range keys {
+		if keyPartitionIDs[i] != p.id {
+			continue
+		}
+		id := p.index.FindIDBySeriesKey(p.segments, keys[i])
+		if id == 0 {
+			writeRequired = true
+			continue
+		}
+		ids[i] = id
+	}
+	p.mu.RUnlock()
+
+	// Exit if all series for this partition already exist.
+	if !writeRequired {
+		return nil
+	}
+
+	type keyRange struct {
+		id     uint64
+		offset int64
+	}
+	newKeyRanges := make([]keyRange, 0, len(keys))
+
+	// Obtain write lock to create new series.
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.closed {
+		return ErrSeriesPartitionClosed
+	}
+
+	// Track offsets of duplicate series.
+	newIDs := make(map[string]uint64, len(ids))
+
+	// if p.DesignateId && len(wantedIds) != len(keys) {
+	// 	return ErrSeriesPartitionDesignatedIdsDismatch
+	// }
+
+	for i := range keys {
+		// Skip series that don't belong to the partition or have already been created.
+		if keyPartitionIDs[i] != p.id || ids[i] != 0 {
+			continue
+		}
+
+		// Re-attempt lookup under write lock.
+		key := keys[i]
+		if ids[i] = newIDs[string(key)]; ids[i] != 0 {
+			continue
+		} else if ids[i] = p.index.FindIDBySeriesKey(p.segments, key); ids[i] != 0 {
+			continue
+		}
+
+		// Write to series log and save offset.
+		var id uint64
+		var offset int64
+		var err error
+		// if p.DesignateId {
+		// 	id, offset, err = p.insertWithId(key, wantedIds[i])
+		// 	// fmt.Printf("insertWithId, returns %d, %d for %v, %d\n", id, offset, string(key), wantedIds[i])
+		// 	if err != nil {
+		// 		return err
+		// 	}
+		// } else {
+		// 	id, offset, err = p.insert(key)
+		// 	if err != nil {
+		// 		return err
+		// 	}
+		// }
+		id, offset, err = p.insertWithDesignatedIDs(key, designatedIDs[i])
+		if err != nil {
+			return err
+		}
+		// Append new key to be added to hash map after flush.
+		ids[i] = id
+		newIDs[string(key)] = id
+		newKeyRanges = append(newKeyRanges, keyRange{id, offset})
+	}
+
+	// Flush active segment writes so we can access data in mmap.
+	if segment := p.activeSegment(); segment != nil {
+		if err := segment.Flush(); err != nil {
+			return err
+		}
+	}
+
+	// Add keys to hash map(s).
+	for _, keyRange := range newKeyRanges {
+		p.index.Insert(p.seriesKeyByOffset(keyRange.offset), keyRange.id, keyRange.offset)
+	}
+
+	// Check if we've crossed the compaction threshold.
+	if p.compactionsEnabled() && !p.compacting &&
+		p.CompactThreshold != 0 && p.index.InMemCount() >= uint64(p.CompactThreshold) &&
+		p.compactionLimiter.TryTake() {
+		p.compacting = true
+		log, logEnd := logger.NewOperation(context.TODO(), p.Logger, "Series partition compaction", "series_partition_compaction", zap.String("path", p.path))
+
+		p.wg.Add(1)
+		go func() {
+			defer p.wg.Done()
+			defer p.compactionLimiter.Release()
+
+			compactor := NewSeriesPartitionCompactor()
+			compactor.cancel = p.closing
+			if err := compactor.Compact(p); err != nil {
+				log.Error("series partition compaction failed", zap.Error(err))
+			}
+
+			logEnd()
+
+			// Clear compaction flag.
+			p.mu.Lock()
+			p.compacting = false
+			p.mu.Unlock()
+		}()
+	}
+
+	return nil
+}
+
 // Compacting returns if the SeriesPartition is currently compacting.
 func (p *SeriesPartition) Compacting() bool {
 	p.mu.RLock()
@@ -475,13 +603,15 @@ func (p *SeriesPartition) insert(key []byte) (id uint64, offset int64, err error
 	return id, offset, nil
 }
 
-// func (p *SeriesPartition) insertWithId(key []byte, wantedId uint64) (id uint64, offset int64, err error) {
-// 	offset, err = p.writeLogEntry(AppendSeriesEntry(nil, SeriesEntryInsertFlag, wantedId, key))
-// 	if err != nil {
-// 		return 0, 0, err
-// 	}
-// 	return wantedId, offset, nil
-// }
+func (p *SeriesPartition) insertWithDesignatedIDs(key []byte, designatedId uint64) (id uint64, offset int64, err error) {
+	offset, err = p.writeLogEntry(AppendSeriesEntry(nil, SeriesEntryInsertFlag, designatedId, key))
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return designatedId, offset, nil
+}
+
 
 // writeLogEntry appends an entry to the end of the active segment.
 // If there is no more room in the segment then a new segment is added.
