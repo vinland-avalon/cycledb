@@ -1,7 +1,9 @@
 package tsi2
 
 import (
+	"bytes"
 	"encoding/binary"
+	"encoding/gob"
 	"io"
 	"math"
 
@@ -82,19 +84,19 @@ func mapToSlice(m map[string]struct{}) [][]byte {
 	return res
 }
 
-func SeriesIdWithMeasurementId(measurementId, id uint64) uint64 {
-	return measurementId<<32 | id
-}
-
 type FileHashMap struct {
-	// data []byte
+	data []byte
 }
 
 func NewFileHashMap() FileHashMap {
 	return FileHashMap{}
 }
 
-func (fh *FileHashMap) FlushTo(w io.Writer, m map[uint64]uint64) (int64, error) {
+func (fh *FileHashMap) ReadFrom(buf []byte) {
+	fh.data = buf
+}
+
+func (fh *FileHashMap) FlushTo(w io.Writer, m map[uint64]uint64) error {
 	n := int64(0)
 
 	// to avoid offset of zero
@@ -117,7 +119,7 @@ func (fh *FileHashMap) FlushTo(w io.Writer, m map[uint64]uint64) (int64, error) 
 
 	// Encode hash map length.
 	if err := writeUint64To(w, uint64(rhhm.Cap()), &n); err != nil {
-		return n, err
+		return err
 	}
 
 	// Encode hash map offset entries.
@@ -130,13 +132,13 @@ func (fh *FileHashMap) FlushTo(w io.Writer, m map[uint64]uint64) (int64, error) 
 		}
 		// fmt.Printf("set elem: %v at %v\n", v, n)
 		if err := writeUint64To(w, uint64(offset), &n); err != nil {
-			return n, err
+			return err
 		}
 	}
 
 	writeUint64To(w, uint64(indexOffset), &n)
 
-	return n, nil
+	return nil
 }
 
 func itob(v uint64) []byte {
@@ -149,10 +151,10 @@ func itob(v uint64) []byte {
 
 // }
 
-func (fh *FileHashMap) Get(buf []byte, k uint64) (uint64, bool) {
-	indexOffset := int64(binary.BigEndian.Uint64(buf[len(buf)-8:]))
+func (fh *FileHashMap) Get(k uint64) (uint64, bool) {
+	indexOffset := int64(binary.BigEndian.Uint64(fh.data[len(fh.data)-8:]))
 
-	n := int64(binary.BigEndian.Uint64(buf[indexOffset : indexOffset+8]))
+	n := int64(binary.BigEndian.Uint64(fh.data[indexOffset : indexOffset+8]))
 	indexOffset += 8
 	hash := rhh.HashKey(itob(k))
 	pos := hash % n
@@ -162,7 +164,7 @@ func (fh *FileHashMap) Get(buf []byte, k uint64) (uint64, bool) {
 	var d int64
 	for {
 		// Find offset of k/v pair.
-		offset := binary.BigEndian.Uint64(buf[indexOffset+(pos*8):])
+		offset := binary.BigEndian.Uint64(fh.data[indexOffset+(pos*8):])
 		// fmt.Printf("find %v at %v\n", k, offset)
 		if offset == 0 {
 			return 0, false
@@ -171,10 +173,10 @@ func (fh *FileHashMap) Get(buf []byte, k uint64) (uint64, bool) {
 		// Evaluate key if offset is not empty.
 		if offset > 0 {
 			// Parse into element.
-			tmpK := binary.BigEndian.Uint64(buf[offset : offset+8])
+			tmpK := binary.BigEndian.Uint64(fh.data[offset : offset+8])
 			// Return if key match.
 			if k == tmpK {
-				return binary.BigEndian.Uint64(buf[offset+8 : offset+16]), true
+				return binary.BigEndian.Uint64(fh.data[offset+8 : offset+16]), true
 			}
 
 			// Check if we've exceeded the probe distance.
@@ -191,4 +193,39 @@ func (fh *FileHashMap) Get(buf []byte, k uint64) (uint64, bool) {
 			return 0, false
 		}
 	}
+}
+
+type IdMap struct {
+	m map[uint64]uint64
+}
+
+func NewIdMap() *IdMap {
+	return &IdMap{}
+}
+
+func (idm *IdMap) FlushTo(w io.Writer, m map[uint64]uint64) error {
+	// Encode the map and write it to the file
+	encoder := gob.NewEncoder(w)
+	if err := encoder.Encode(m); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (idm *IdMap) ReadFrom(buf []byte) {
+	// Create an instance to decode the map
+	decoder := gob.NewDecoder(bytes.NewReader(buf))
+
+	// Create a map to hold the decoded data
+	idm.m = make(map[uint64]uint64)
+
+	// Decode the map from the file
+	if err := decoder.Decode(&idm.m); err != nil {
+		panic(err)
+	}
+}
+
+func (idm *IdMap) Get(k uint64) (uint64, bool) {
+	v, ok := idm.m[k]
+	return v, ok
 }

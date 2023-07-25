@@ -2,12 +2,18 @@ package tsi1_test
 
 import (
 	"bytes"
+	"fmt"
+	"io/ioutil"
+	"math/rand"
+	"os"
 	"reflect"
 	"testing"
 	"time"
 
 	"cycledb/pkg/tsdb"
+	generator "cycledb/pkg/tsdb/index/tag_pairs_generator"
 	"cycledb/pkg/tsdb/index/tsi1"
+
 	"github.com/influxdata/influxdb/v2/models"
 )
 
@@ -160,6 +166,67 @@ func BenchmarkIndexFile_TagValueSeries(b *testing.B) {
 		defer sfile.Close()
 		benchmarkIndexFile_TagValueSeries(b, MustFindOrGenerateIndexFile(sfile.SeriesFile, 10, 7, 7))
 	})
+}
+
+func BenchmarkIndexFile_TagValueSeries_Full_Permutation(b *testing.B) {
+	tmp_gen := generator.FullPermutationGen{}
+	tagKeyNum := 4
+	for _, tagValueNum := range []int{4, 5, 6, 7, 8, 9, 10} {
+		name := fmt.Sprintf("tagKeyNum=%d, tagValueNum=%d", tagKeyNum, tagValueNum)
+
+		sfile := MustOpenSeriesFile(b)
+		defer sfile.Close()
+		lf := MustOpenLogFile(sfile.SeriesFile)
+		seriesSet := tsdb.NewSeriesIDSet()
+
+		tagsSlice := tmp_gen.GenerateInsertTagsSlice(tagKeyNum, tagValueNum)
+		for _, tags := range tagsSlice {
+			lf.AddSeriesList(seriesSet, [][]byte{[]byte("test")}, []models.Tags{tags})
+		}
+
+		id := time.Now().Nanosecond()
+		filename := fmt.Sprintf("./benchmark_tagvalueseries_%d", id)
+		defer os.Remove(filename)
+
+		file, err := os.Create(filename)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		if _, err := lf.CompactTo(file, M, K, nil); err != nil {
+			b.Fatal(err)
+		}
+
+		file.Close()
+
+		b.ResetTimer()
+
+		b.Run(name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				// Load index file from buffer.
+				f := tsi1.NewIndexFile(sfile.SeriesFile)
+				buf, err := ioutil.ReadFile(filename)
+				if err != nil {
+					b.Fatal(err)
+				}
+				if err := f.UnmarshalBinary(buf); err != nil {
+					b.Fatal(err)
+				}
+				rand.Seed(time.Now().UnixNano())
+				index := rand.Intn(len(tagsSlice))
+				keyIndex := rand.Intn(tagKeyNum)
+				idsSet, err := f.TagValueSeriesIDSet([]byte("test"), []byte(tagsSlice[index][keyIndex].Key), []byte(tagsSlice[index][keyIndex].Value))
+				if err!= nil{
+					b.Fatal(err)
+				}
+				if idsSet.Cardinality() != uint64(pow(tagValueNum, tagKeyNum - 1)) {
+					b.Fatal()
+				}
+			}
+		})
+
+	}
+
 }
 
 func benchmarkIndexFile_TagValueSeries(b *testing.B, idx *tsi1.IndexFile) {

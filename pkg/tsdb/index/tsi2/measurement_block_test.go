@@ -69,8 +69,6 @@ func TestMeasurementBlockWriter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dec := NewFileHashMap()
-
 	// Verify data in block.
 	if e, ok := blk.Elem([]byte("foo")); !ok {
 		t.Fatal("expected element")
@@ -80,9 +78,9 @@ func TestMeasurementBlockWriter(t *testing.T) {
 		t.Fatalf("unexpected series data: %#v", e.seriesIDSet)
 	} else if reflect.DeepEqual(grids[0], e.grids[0]) {
 		t.Fatalf("unexpected grids: %+v", e.grids)
-	} else if v, ok := dec.Get(e.IdMap, 3); !ok || v != uint64(103){
+	} else if v, ok := e.GetSeriesFileId(uint64(3)); !ok || v != uint64(103){
 		t.Fatalf("unexpected hashfilemap get: get %v for %v", v, 3)
-	}  else if v, ok := dec.Get(e.IdMap, 8); ok{
+	}  else if v, ok := e.GetSeriesFileId(uint64(8)); ok {
 		t.Fatalf("unexpected hashfilemap get: get %v for %v", v, 8)
 	}
 
