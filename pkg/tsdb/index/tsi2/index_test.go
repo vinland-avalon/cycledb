@@ -453,7 +453,7 @@ func TestIndex_Open(t *testing.T) {
 
 func TestIndex_TagValueSeriesIDIterator(t *testing.T) {
 	idx1 := MustOpenDefaultIndex(t) // Uses the single series creation method CreateSeriesIfNotExists
-	// defer idx1.Close()
+	defer idx1.Close()
 	idx2 := MustOpenDefaultIndex(t) // Uses the batch series creation method CreateSeriesListIfNotExists
 	defer idx2.Close()
 

@@ -13,25 +13,23 @@ type MeasurementInfo struct {
 	Offset int64
 	Size   int64
 	idsSet *tsdb.SeriesIDSet
-	idMap  map[uint64]uint64
 }
 
-func NewMeasurementInfo(name []byte, offset, size int64, idsSet *tsdb.SeriesIDSet, idMap map[uint64]uint64) MeasurementInfo {
+func NewMeasurementInfo(name []byte, offset, size int64, idsSet *tsdb.SeriesIDSet) MeasurementInfo {
 	return MeasurementInfo{
 		Name:   name,
 		Offset: offset,
 		Size:   size,
 		idsSet: idsSet,
-		idMap:  idMap,
 	}
 }
 
 // Ensure measurement blocks can be written and opened.
 func TestMeasurementBlockWriter(t *testing.T) {
 	ms := []MeasurementInfo{
-		NewMeasurementInfo([]byte("foo"), 100, 10, tsdb.NewSeriesIDSet([]uint64{1, 3, 4}...), map[uint64]uint64{1:101, 3:103, 4:104}),
-		NewMeasurementInfo([]byte("bar"), 200, 20, tsdb.NewSeriesIDSet([]uint64{2}...), map[uint64]uint64{2:102}),
-		NewMeasurementInfo([]byte("baz"), 300, 30, tsdb.NewSeriesIDSet([]uint64{5, 6}...), map[uint64]uint64{5:105, 6:106}),
+		NewMeasurementInfo([]byte("foo"), 100, 10, tsdb.NewSeriesIDSet([]uint64{1, 3, 4}...)),
+		NewMeasurementInfo([]byte("bar"), 200, 20, tsdb.NewSeriesIDSet([]uint64{2}...)),
+		NewMeasurementInfo([]byte("baz"), 300, 30, tsdb.NewSeriesIDSet([]uint64{5, 6}...)),
 	}
 
 	grids := [][]*GridCompactInfo{
@@ -52,7 +50,7 @@ func TestMeasurementBlockWriter(t *testing.T) {
 	// Write the measurements to writer.
 	mw := NewMeasurementBlockWriter()
 	for i, m := range ms {
-		mw.Add(m.Name, &IndexFileMeasurementCompactInfo{Offset: m.Offset, Size: m.Size, gridInfos: grids[i]}, m.idMap, m.idsSet)
+		mw.Add(m.Name, &IndexFileMeasurementCompactInfo{Offset: m.Offset, Size: m.Size, gridInfos: grids[i], MeasurementID: uint64(i)}, m.idsSet)
 	}
 
 	// Encode into buffer.
@@ -78,10 +76,8 @@ func TestMeasurementBlockWriter(t *testing.T) {
 		t.Fatalf("unexpected series data: %#v", e.seriesIDSet)
 	} else if reflect.DeepEqual(grids[0], e.grids[0]) {
 		t.Fatalf("unexpected grids: %+v", e.grids)
-	} else if v, ok := e.GetSeriesFileId(uint64(3)); !ok || v != uint64(103){
-		t.Fatalf("unexpected hashfilemap get: get %v for %v", v, 3)
-	}  else if v, ok := e.GetSeriesFileId(uint64(8)); ok {
-		t.Fatalf("unexpected hashfilemap get: get %v for %v", v, 8)
+	} else if e.id != 0 {
+		t.Fatalf("unexpected id: %+v", e.id)
 	}
 
 	if e, ok := blk.Elem([]byte("bar")); !ok {
@@ -92,6 +88,8 @@ func TestMeasurementBlockWriter(t *testing.T) {
 		t.Fatalf("unexpected series data: %#v", e.seriesIDSet)
 	} else if reflect.DeepEqual(grids[1], e.grids[1]) {
 		t.Fatalf("unexpected grids: %+v", e.grids)
+	}  else if e.id != 1 {
+		t.Fatalf("unexpected id: %+v", e.id)
 	}
 
 	if e, ok := blk.Elem([]byte("baz")); !ok {
@@ -102,6 +100,8 @@ func TestMeasurementBlockWriter(t *testing.T) {
 		t.Fatalf("unexpected series data: %#v", e.seriesIDSet)
 	} else if reflect.DeepEqual(grids[2], e.grids[2]) {
 		t.Fatalf("unexpected grids: %+v", e.grids)
+	}  else if e.id != 2 {
+		t.Fatalf("unexpected id: %+v", e.id)
 	}
 
 	// Verify non-existent measurement doesn't exist.

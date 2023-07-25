@@ -107,8 +107,7 @@ func (blk *MeasurementBlock) Elem(name []byte) (e MeasurementBlockElem, ok bool)
 type MeasurementBlockElem struct {
 	// flag byte   // flag
 	name []byte // measurement name
-
-	idMap IdMap
+	id   uint64
 
 	gridsBlock struct {
 		offset int64
@@ -169,6 +168,9 @@ func (e *MeasurementBlockElem) UnmarshalBinary(data []byte) error {
 	e.gridsBlock.offset, data = int64(binary.BigEndian.Uint64(data)), data[8:]
 	e.gridsBlock.size, data = int64(binary.BigEndian.Uint64(data)), data[8:]
 
+	// Parse measurement id
+	e.id, data = uint64(binary.BigEndian.Uint64(data)), data[8:]
+
 	// Parse each grid
 	gridsNum, data := int64(binary.BigEndian.Uint64(data)), data[8:]
 	var offset int64
@@ -215,15 +217,15 @@ func (e *MeasurementBlockElem) UnmarshalBinary(data []byte) error {
 	data = data[sz:]
 	// }
 
-	// map map
-	sz, n, err = uvarint(data)
-	if err != nil {
-		return err
-	}
-	data = data[n:]
-	// look up a number to fillup the IdMap
-	e.idMap.ReadFrom(data)
-	data = data[sz:]
+	// // map map
+	// sz, n, err = uvarint(data)
+	// if err != nil {
+	// 	return err
+	// }
+	// data = data[n:]
+	// // look up a number to fillup the IdMap
+	// e.idMap.ReadFrom(data)
+	// data = data[sz:]
 
 	// Save length of elem.
 	e.size = start - len(data)
@@ -231,8 +233,8 @@ func (e *MeasurementBlockElem) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-func (e *MeasurementBlockElem) GetSeriesFileId(k uint64) (uint64, bool) {
-	return e.idMap.Get(k)
+func (e *MeasurementBlockElem) FormatIdWithMeasurementID(id uint64) (uint64, bool) {
+	return (e.id << 24) | id, true
 }
 
 // MeasurementBlockWriter writes a measurement block.
@@ -249,10 +251,11 @@ func NewMeasurementBlockWriter() *MeasurementBlockWriter {
 }
 
 // Add adds a measurement with series and tag set offset/size.
-func (mw *MeasurementBlockWriter) Add(name []byte, mmInfo *IndexFileMeasurementCompactInfo, m map[uint64]uint64, seriesIDSet *tsdb.SeriesIDSet) {
+func (mw *MeasurementBlockWriter) Add(name []byte, mmInfo *IndexFileMeasurementCompactInfo, seriesIDSet *tsdb.SeriesIDSet) {
 	mm := mw.mms[string(name)]
 	mm.gridBlock.offset = mmInfo.Offset
 	mm.gridBlock.size = mmInfo.Size
+	mm.id = mmInfo.MeasurementID
 
 	for _, grid := range mmInfo.gridInfos {
 		mm.grids = append(mm.grids, struct {
@@ -264,7 +267,6 @@ func (mw *MeasurementBlockWriter) Add(name []byte, mmInfo *IndexFileMeasurementC
 		})
 	}
 
-	mm.indexIdToFileId = m
 	mm.seriesIDSet = seriesIDSet
 	mw.mms[string(name)] = mm
 
@@ -376,6 +378,8 @@ func (mw *MeasurementBlockWriter) writeMeasurementTo(w io.Writer, name []byte, m
 		return err
 	} else if err := writeUint64To(w, uint64(mm.gridBlock.size), n); err != nil {
 		return err
+	} else if err := writeUint64To(w, mm.id, n); err != nil {
+		return err
 	}
 
 	// Write meta data for each grid
@@ -425,33 +429,33 @@ func (mw *MeasurementBlockWriter) writeMeasurementTo(w io.Writer, name []byte, m
 	nn, _ := mw.buf.WriteTo(w)
 	*n += nn
 
-	// Write indexId-seriesFileId map to buffer.
-	mw.buf.Reset()
-	mapEnc := NewIdMap()
-	if err := mapEnc.FlushTo(&mw.buf, mm.indexIdToFileId); err != nil {
-		return err
-	}
-
-	// Write data size & buffer.
-	if err := writeUvarintTo(w, uint64(mw.buf.Len()), n); err != nil {
-		return err
-	}
-
-	// Word align bitmap data.
-	// if offset := (*n) % 8; offset != 0 {
-	// 	if err := writeTo(w, make([]byte, 8-offset), n); err != nil {
-	// 		return err
-	// 	}
+	// // Write indexId-seriesFileId map to buffer.
+	// mw.buf.Reset()
+	// mapEnc := NewIdMap()
+	// if err := mapEnc.FlushTo(&mw.buf, mm.indexIdToFileId); err != nil {
+	// 	return err
 	// }
 
-	nn, err := mw.buf.WriteTo(w)
-	*n += nn
-	// fmt.Printf("The size of map block:%v\n", nn)
-	// fmt.Printf("The size of map block if use gob:%v\n", encodeWithGob(mm.indexIdToFileId))
-	// fmt.Printf("The size of map block if use messagePack:%v\n", encodeWithMessagePack(mm.indexIdToFileId))
-	// fmt.Printf("The size of map block if just store nums:%v\n", eoncodeNums(mm.indexIdToFileId))
+	// // Write data size & buffer.
+	// if err := writeUvarintTo(w, uint64(mw.buf.Len()), n); err != nil {
+	// 	return err
+	// }
 
-	return err
+	// // Word align bitmap data.
+	// // if offset := (*n) % 8; offset != 0 {
+	// // 	if err := writeTo(w, make([]byte, 8-offset), n); err != nil {
+	// // 		return err
+	// // 	}
+	// // }
+
+	// nn, err := mw.buf.WriteTo(w)
+	// *n += nn
+	// // fmt.Printf("The size of map block:%v\n", nn)
+	// // fmt.Printf("The size of map block if use gob:%v\n", encodeWithGob(mm.indexIdToFileId))
+	// // fmt.Printf("The size of map block if use messagePack:%v\n", encodeWithMessagePack(mm.indexIdToFileId))
+	// // fmt.Printf("The size of map block if just store nums:%v\n", eoncodeNums(mm.indexIdToFileId))
+
+	return nil
 }
 
 // func encodeWithGob(m map[uint64]uint64) int {
@@ -488,9 +492,9 @@ type CompactedMeasurement struct {
 		offset int64
 		size   int64
 	}
-	seriesIDSet     *tsdb.SeriesIDSet
-	indexIdToFileId map[uint64]uint64
-	offset          int64
+	seriesIDSet *tsdb.SeriesIDSet
+	offset      int64
+	id          uint64
 }
 
 // MeasurementBlockTrailer represents meta data at the end of a MeasurementBlock.

@@ -185,18 +185,9 @@ func (i *Index) CreateSeriesListIfNotExists(keys, names [][]byte, tagsSlice []mo
 	}
 
 	// 3. add to seriesFile
-	seriesFileIds, err := i.sfile.CreateSeriesListIfNotExists(newNames, newTagsSlice)
+	_, err := i.sfile.CreateSeriesListIfNotExistsWithDesignatedIDs(newNames, newTagsSlice, newIDs)
 	if err != nil {
 		return err
-	}
-
-	// todo(vinland): drop the checks for production env
-	if len(seriesFileIds) != len(newIDs) {
-		return fmt.Errorf("CreateSeriesListIfNotExist: ids in grid index is not same as ids in series file, len of %d to %d", len(seriesFileIds), len(newIDs))
-	}
-
-	for index := range newIDs {
-		i.measurements.SetIdMap(newNames[index], newIDs[index], seriesFileIds[index])
 	}
 
 	return nil
@@ -539,7 +530,7 @@ func (i *Index) writeGridsForMeasurementTo(w io.Writer, name string, info *Index
 	// Save tagset offset to measurement.
 	size := *n - offset
 
-	info.Mms[name] = &IndexFileMeasurementCompactInfo{Offset: offset, Size: size, gridInfos: gridInfos}
+	info.Mms[name] = &IndexFileMeasurementCompactInfo{Offset: offset, Size: size, gridInfos: gridInfos, MeasurementID: mm.measurementID}
 
 	return nil
 }
@@ -564,7 +555,7 @@ func (i *Index) WriteMeasurementBlockTo(w io.Writer, names []string, info *Index
 		if mmInfo == nil {
 			return ErrMeasurementNotFound
 		}
-		mw.Add([]byte(mm.name), mmInfo, mm.gIndex.IndexIdToSeriesFileId, mm.SeriesIDSet())
+		mw.Add([]byte(mm.name), mmInfo, mm.CacheSeriesIDSet())
 	}
 
 	// Flush data to writer.
