@@ -26,14 +26,15 @@ The purpose of this operation is to index an incoming series key, which is norma
 The main purpose of Grid Index is to optimize storage usage. So this chapter tries to compare spatial complexity between traditional inverted index and Grid Index.  
 #### Upper Bound
 Regarding the grid index as a compression optimization of invert index, the upper bound of compression ratio occurs when the tag values corresponding to all tag keys are fully arranged. In this case, the series keys are of full permutaion and no point in grids is wasted. Let there be $N$ tag keys, the $i_{th}$ tag key corresponds to $M_i$ tag values, and the average cost to store a tag value is $L$.  
-- For traditional inverted index, for $i_{th}$ tag key, the size of posting list is $f(i)=\frac{\prod_{j=0}^{N-1}{M_j}}{M_i}$. The overall spatial complexity is $O(\sum_{i=0}^{N-1}f(i))$.  
-- For Grid Index, let each dimension be pre-allocated with $K$ values, then each grid could contain $K^N$ series, and only take up $K \times N \times L$ memory, so the overall spatial complexity is $O(\frac{N \times \prod_{i=0}^{N-1}{M_i}}{K^{N-1}})$.
-- The compression ratio is $\frac{L \times N}{K^{N-1} \times \sum_{i=0}^{N-1}M_i^{-1}}$. For a special case where $M_i=M | i \in [0,N-1]$, the compression ratio is $\frac{L \times M}{K^{N-1}}$.
+- For traditional inverted index, for $i_{th}$ tag key, the size of posting list is $f(i)=\prod_{j=0}^{N-1}{M_j}$. The overall spatial complexity is $O(N \times \prod_{j=0}^{N-1}{M_j})$.  
+<!-- - For Grid Index, let each dimension be pre-allocated with $K$ values, then each grid could contain $K^N$ series, and only take up $K \times N \times L$ memory, so the overall spatial complexity is $O(\frac{N \times \prod_{i=0}^{N-1}{M_i}}{K^{N-1}})$. -->
+- For Grid Index, a dimension with $M_i$ tag values will only take up $M_i \times L$ memory, so the overall spatial complexity is $O(L \times \sum_{i=0}^{N-1}{M_i})$. Also, since we always need a data structure such as hashmap or bit map to avoid fake positive cases, the spatial complexity is indeed $O(\prod_{i=0}^{N-1}M_i)$
+- The compression ratio is $N$. If the bitmap is optimized, the compression  ratio will be $\frac{N \times \prod_{i=0}^{N-1}M_i}{L \times \sum_{i=0}^{N-1}{M_i}}$.
 #### Lower Bound
 The lowest compression ratio occurs when every tag value only occurs once, which will lead to many voids in grids. Let there be $N$ tag keys, each tag key corresponds to $M$ tag values, and the average cost to store a tag value is $L$. In this case, only the identifiers on diagonal is valid. So the $i_{th} | i \in [0, M-1]$ series key should be like $[ TagKey_0: TagValue_{0,i}, TagKey_1: TagValue_{1,i}, … TagKey_{N-1}: TagValue_{N-1,i} ]$.
 - For traditional inverted index, the overall spatial complexity is $O(M \times N)$.
 - For Grid Index, the overall spatial complexity is $O(L \times M \times N)$.
-- The compression ratio is $L$, revealing that even in worst case, the performance of Grid Index is close to that of traditional inverted index.
+- The compression ratio is $\frac{1}{L}$, revealing that even in worst case, the performance of Grid Index is close to that of traditional inverted index.
 
 ## Result
 In this chapter, we compare Grid Index with traditional inverted index. We implement Grid Index in Golang 1.18 and perform our evaluation via single-threaded experiments on an Ubuntu Linux machine with Intel Core Xeon(R) Gold 6330 2.00GHz CPU. As for other experimental parameters, $N$ is equal to 3, $L$ is 1 byte, and $K$ will be decided by optimizer automatically.  
