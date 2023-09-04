@@ -13,5 +13,7 @@ This repo is basically built from tsdb package of InfluxDB. Our implementation i
 - There's also a simple Makefile in tsi2 folder, including some commands to run test and benchmark.
 ## To-do  List
 - Persistence. The file structure and 0-level compact function is completed, the remaining work is to implement trigger strategy. We should keep it just like tsi1.
-- Compaction. So far, the flush (0-level compaction) is completed, while  
+- Compaction. So far, the flush (0-level compaction) is completed, however, there should be further compaction.
+- The number of seriesfile's partition is set to 1 to avoid mismatching after assigning id. There should be a better solusion.
+- Concurrency.
 
