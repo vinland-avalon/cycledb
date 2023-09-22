@@ -4,7 +4,9 @@ So far, this repo is create to build [Grid Index](./pkg/tsdb/index/tsi2). Reach 
 ## Abstract
 In some time-series databases, a form of an inverted index may be utilized for specific purposes, such as indexing and querying based on tag values or metadata associated with time-series data. This allows for efficient filtering and retrieval of time-series data based on specific tag values, enabling queries that involve filtering by tags.  
 However, inverted index is a trade-off between storage usage and query performance. The posting list, a data structure to store record identifiers associated with each term in the index, will store redundant identifiers among different tag keys. Since time-series databases always deal with large-scale data in senarios like real-time monitoring and algorithmic trading, such storage overhead is extremely severe.  
-In this project, the Grid Index is proposed to function the same as an inverted index with limited storage usage. The Grid Index takes multi-dimension index as hyperdimension space where identifiers of points represent records. 
+In this project, the Grid Index is proposed to function the same as an inverted index with limited storage usage. The Grid Index takes multi-dimension index as hyperdimension space where identifiers of points represent records.  
+The Architecture of Grid Index is as follows.
+![architecture](https://github.com/vinland-avalon/cycledb/blob/master/Architecture.png?raw=true)
 ## Method
 In previous time-series databases, inverted index or other tag indexes are used to map tag values to a list of series identifiers. This is normally the first step to look up data. The Grid Index functions exactly the same.  
 ### Data Structure
