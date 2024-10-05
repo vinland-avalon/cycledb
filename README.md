@@ -1,26 +1,8 @@
----
-documentclass: article
-fontsize: 11pt
-paper: a4paper
-geometry: margin=1in
-packages:
-  - mathptmx
-  - setspace
-  - parskip
-  - multicol
-  - graphicx
-spacing: onehalf
-columns: 1
-title: "Grid Index: an Optimized Index Addressing High Cardinality in IoT Time-Series"
-author: "Bohan Wu"
-date: \today
----
-
-# Introduction
+# Grid Index: an Optimized Index Addressing High Cardinality in IoT Time-Series
 
 In the realm of IoT, devices generate vast quantities of time-series data with high cardinality. Cardinality, in the context of databases, refers to the number of unique values in a dataset's column.
 
-High cardinality in time-series databases, especially in IoT applications, is a more complex challenge for two reasons. First, time-series data are typically organized into series [1]. A time series of data has the same values for tags but different timestamps. So for this data model, the initial step in a query operation is to identify the target series based on specified tag values, and TSDB normally builds an index on these tag values. For example, in a query like "depth > 10m and location = '41° N, 87° W'," identifying the corresponding series IDs is necessary before the actual data can be retrieved. As cardinality increases, designing a fast and efficient indexing method to locate these series IDs becomes increasingly difficult. Second, IoT data often contains numerous identifiers (e.g., sensor IDs, instances) and metadata tag values. For example, an oceanographic multisensor buoy system [2] might use sensor IDs as identifiers, with tags like temperature, depth, pressure, turbidity, and pH — each potentially having millions of distinct values. The combination of these numerous, unique identifiers and diverse tag values also contributes to the high cardinality, complicating data storage, retrieval, and analysis.
+High cardinality in time-series databases, especially in IoT applications, is a more complex challenge for two reasons. First, time-series data are typically organized into series [1]. A time series of data has the same values for tags but different timestamps. So for this data model, the initial step in a query operation is to identify the target series based on specified tag values, and TSDB normally builds an index on these tag values. For example, in a query like "depth > 10m and location = '41° N, 87° W'," identifying the corresponding series IDs is necessary before the actual data can be retrieved. As cardinality increases, designing a fast and efficient indexing method to locate these series IDs becomes increasingly difficult. Second, IoT data often contains numerous identifiers (e.g., sensor IDs, instances) and metadata tag values.
 
 High cardinality can severely impact write, query, and especially, storage efficiency. To mitigate these issues, some time-series databases introduce inverted indexes to map tag values to series IDs [3]. However, while this approach can accelerate queries in most cases, it encounters significant storage overhead due to the redundancy of series IDs across different tags [4]. Specifically, if there are *k* tag sets and *n* series, the inverted index must expand to *k\*n*, requiring the series IDs to be stored separately in the posting lists for each tag set. Additionally, for optimal query speed, the index is typically expected to be fully loaded into memory or cache. However, as the index size grows, it may exceed available memory, causing it to swap to disk. This results in high disk I/O and a noticeable decline in query performance.
 
@@ -30,11 +12,11 @@ This approach limits the impact of high cardinality by compressing index storage
 
 By optimizing storage and query efficiency in time-series databases, this new index can significantly enhance the performance and scalability of IoT systems. This improvement is crucial for applications with large-scale sensor networks and real-time data analysis. The reduction in storage overhead will make it feasible to handle high-cardinality data, especially for those resource-limited devices, thus broadening the scope of IoT applications.
 
-# Possible Approaches
+# Methods
 
 Some time-series databases utilize inverted indexes to accelerate queries, which allows for efficient filtering and retrieval of time-series data based on specific tag values. However, an inverted index is a trade-off between storage usage and query performance. The posting list, a data structure to store series identifiers associated with each term in the index, will store redundant identifiers among different tag sets. Since time-series databases always deal with large-scale data in scenarios, e.g., IoT sensors, such storage overhead is extremely severe.
 
-To address this issue, we propose the "Grid Index," which functions similarly to an inverted index but with more efficient storage usage. The Grid Index models multi-dimensional indexes as a hyperdimensional space where points represent time-series IDs. For example, the grid C for Measurement Y in Figure 1 illustrates this concept. If we are indexing buoy sensor data, there may be tags for *Area* and *Depth*, which together form a two-dimensional space used to pre-allocate possible series IDs.
+To address this issue, we propose the "Grid Index," which functions similarly to an inverted index but with more efficient storage usage. The Grid Index models multi-dimensional indexes as a hyperdimensional space where points represent time-series IDs. For example, the grid C for Measurement Y in Figure 1 illustrates this concept. If we are indexing http access data, there may be tags for *Status_Code* and *Method*, which together form a two-dimensional space used to pre-allocate possible series IDs.
 
 **Data Structure:** A grid represents a multi-dimensional space where each dimension corresponds to a series of tag values for a specific tag key. Points within this space are assigned ordered serial identifiers, which directly correspond to the time-series data IDs. This structure allows the grid to avoid explicit storage of redundant identifiers, thereby reducing memory usage.
 
